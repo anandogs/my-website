@@ -192,8 +192,7 @@
     <div class="background"></div>
     <div class="content">
       <h1>Anando Ghose</h1>
-      <a href="mailto:me@anandoghose.com" class="email-link">Email me</a>
-      
+	  <a href="#" class="email-link" id="copy-email">Email me</a>      
       <p class="about">
         Building automations for finance reporting & analytics. 
         <br/>Tech enthusiast who loves turning complex problems into elegant solutions.
@@ -217,4 +216,66 @@
     </div>
   </div>
 </body>
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+	  const emailLink = document.getElementById('copy-email');
+	  const emailAddress = 'me@anandoghose.com';
+	  const originalText = emailLink.textContent;
+	  
+	  emailLink.addEventListener('click', function(e) {
+		e.preventDefault();
+		
+		// Try to use the modern Clipboard API
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+		  navigator.clipboard.writeText(emailAddress).then(function() {
+			showCopiedFeedback();
+		  }).catch(function(err) {
+			// Fall back to older method if permission is denied
+			fallbackCopyTextToClipboard(emailAddress);
+		  });
+		} else {
+		  // Fall back to older method if Clipboard API not available
+		  fallbackCopyTextToClipboard(emailAddress);
+		}
+	  });
+	  
+	  function fallbackCopyTextToClipboard(text) {
+		// Create temporary textarea
+		const textArea = document.createElement("textarea");
+		textArea.value = text;
+		
+		// Make it invisible but part of the document
+		textArea.style.position = "fixed";
+		textArea.style.opacity = "0";
+		document.body.appendChild(textArea);
+		
+		// Select and copy
+		textArea.select();
+		
+		try {
+		  const successful = document.execCommand('copy');
+		  if (successful) {
+			showCopiedFeedback();
+		  } else {
+			console.error('Failed to copy');
+		  }
+		} catch (err) {
+		  console.error('Error: ', err);
+		}
+		
+		// Clean up
+		document.body.removeChild(textArea);
+	  }
+	  
+	  function showCopiedFeedback() {
+		// Success feedback
+		emailLink.textContent = 'Copied!';
+		
+		// Reset text after 2 seconds
+		setTimeout(function() {
+		  emailLink.textContent = originalText;
+		}, 2000);
+	  }
+	});
+  </script>
 </html>
