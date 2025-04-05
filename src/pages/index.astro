@@ -1,11 +1,212 @@
----
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anando Ghose</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="shortcut icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --blue-link: #0000FF;
+      --text-dark: #000000;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      background-color: #f0f0f0;
+      overflow: hidden;
+    }
+    
+    .container {
+      position: relative;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    .background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('/mac-background.png');
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+    }
+    
+    .content {
+      position: absolute;
+      top: 50px;
+      left: 50px;
+      z-index: 10;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      color: var(--text-dark);
+      margin-bottom: 0.5rem;
+    }
+    
+    .email-link {
+      display: block;
+      font-size: 2rem;
+      color: var(--blue-link);
+      margin-bottom: 2rem;
+      text-decoration: none;
+    }
+    
+    .about {
+      max-width: 450px;
+      margin-bottom: 2rem;
+      color: #fff;
+      line-height: 1.6;
+    }
+    
+    .social-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    .social-link {
+      color: var(--blue-link);
+      text-decoration: none;
+      font-size: 1.5rem;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .social-link i {
+      font-size: 1.75rem;
+    }
+    
+    .social-link:hover {
+      opacity: 0.8;
+      transform: translateY(-2px);
+    }
+    
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+    
+    @media (max-width: 768px) {
+      .content {
+        top: 30px;
+        left: 30px;
+        right: 30px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .email-link {
+        font-size: 1.6rem;
+      }
+      
+      .about {
+        max-width: 100%;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .content {
+        top: 20px;
+        left: 20px;
+        right: 20px;
+      }
+      
+	  .social-links {
+        display: flex;
+        gap: 1rem;
+      }
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
----
+      .social-link {
+        color: var(--blue-link);
+        text-decoration: none;
+        font-size: 1.5rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px;
+        background-color: rgba(255, 255, 255, 0.85);
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
 
-<Layout>
-	<Welcome />
-</Layout>
+      .social-link i {
+        font-size: 1.5rem;
+      }
+
+      .social-link:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+        background-color: #fff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Additional style if you want text labels alongside icons */
+      .social-link-with-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+      }
+
+      .social-link-with-text span {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="background"></div>
+    <div class="content">
+      <h1>Anando Ghose</h1>
+      <a href="mailto:me@anandoghose.com" class="email-link">Email me</a>
+      
+      <p class="about">
+        Building automations for finance reporting & analytics. 
+        <br/>Tech enthusiast who loves turning complex problems into elegant solutions.
+        <br/>Self-taught programmer. MBA from the Indian School of Business.
+      </p>
+      
+      <div class="social-links">
+        <a href="https://substack.com/@anandoghose" class="social-link"><i class="fa-solid fa-newspaper"></i><span class="sr-only">Substack</span></a>
+        <a href="https://www.linkedin.com/in/anandoghose/" class="social-link"><i class="fa-brands fa-linkedin"></i><span class="sr-only">LinkedIn</span></a>
+        <a href="https://instagram.com/your-profile" class="social-link"><i class="fa-brands fa-instagram"></i><span class="sr-only">Instagram</span></a>
+        <a href="https://www.youtube.com/channel/UCb8LzmczkHjCz0Bhvgg-QjA" class="social-link"><i class="fa-brands fa-youtube"></i><span class="sr-only">Youtube</span></a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
