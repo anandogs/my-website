@@ -242,6 +242,51 @@
           font-weight: 500;
         }
       }
+      .lucky-button-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: start;
+  }
+  
+  .lucky-button {
+    display: inline-block;
+    background-color: #c0c0c0;
+    border: 2px solid;
+    border-color: #ffffff #808080 #808080 #ffffff;
+    color: #000000;
+    font-family: "MS Sans Serif", "Tahoma", sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+    margin: 11px 4px;
+    padding: 3px 20px;
+    height: 22px;
+    min-width: 90px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    box-shadow: 1px 1px 0px rgba(0,0,0,0.1);
+    border-radius: 0;
+    position: relative;
+    line-height: 1;
+  }
+  
+  .lucky-button:hover {
+    background-color: #c0c0c0;
+  }
+  
+  .lucky-button:active {
+    background-color: #c0c0c0;
+    border-color: #808080 #ffffff #ffffff #808080;
+    padding: 4px 19px 2px 21px;
+    box-shadow: none;
+  }
+
+  @media (max-width: 480px) {
+    .lucky-button-container {
+      margin-top: 1.5rem;
+    }
+  }
     </style>
 
     <!-- Non-blocking font loading -->
@@ -381,10 +426,12 @@
             >
           </a>
         </div>
+        <div class="lucky-button-container">
+          <button id="lucky-button" class="lucky-button">I'm Feeling Lucky</button>
+        </div>
       </main>
     </div>
 
-    <!-- Defer non-critical JavaScript -->
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const emailLink = document.getElementById("copy-email");
@@ -505,11 +552,8 @@
         return nicknames[randomIndex];
       }
 
-      // Function to load the monospace font
       function loadMonospaceFont() {
-        // Check if font is already loaded
         if (!document.getElementById("monospace-font-link")) {
-          // Create font link element for a monospace/coding font
           const fontLink = document.createElement("link");
           fontLink.id = "monospace-font-link";
           fontLink.rel = "stylesheet";
@@ -519,23 +563,18 @@
         }
       }
 
-      // Function to update the heading with a random nickname
       function updateHeadingWithNickname() {
-        // First load the font
         loadMonospaceFont();
 
         const h1Element = document.querySelector("h1");
         if (h1Element) {
           const randomNickname = getRandomNickname();
 
-          // Clear existing content
           h1Element.innerHTML = "";
 
-          // Create main text
           const mainText = document.createTextNode("Hi, I'm Anando, ");
           h1Element.appendChild(mainText);
 
-          // Create styled element for the nickname
           const nicknameSpan = document.createElement("span");
           nicknameSpan.textContent = randomNickname;
           nicknameSpan.style.fontFamily = "'Caveat', cursive";
@@ -549,15 +588,25 @@
           nicknameSpan.style.display = "inline-block";
           nicknameSpan.style.paddingTop = "2px";
 
-          // Add nickname to heading
           h1Element.appendChild(nicknameSpan);
         }
       }
 
-      // Run the function when the page loads
       document.addEventListener("DOMContentLoaded", function () {
         updateHeadingWithNickname();
       });
+      document.addEventListener("DOMContentLoaded", function() {
+  const luckyButton = document.getElementById("lucky-button");
+  
+  luckyButton!.addEventListener("click", function() {
+    luckyButton!.style.borderColor = "#808080 #ffffff #ffffff #808080";
+    luckyButton!.style.padding = "4px 19px 2px 21px";
+    
+    setTimeout(() => {
+      window.location.href = "/random1";
+    }, 100);
+  });
+});
     </script>
   </body>
 </html>
