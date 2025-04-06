@@ -4,10 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anando Ghose - Automation, Tech, Finance</title>
-    <meta
-      name="title"
-      content="Anando Ghose | Automation, Tech, Finance"
-    />
+    <meta name="title" content="Anando Ghose | Automation, Tech, Finance" />
     <meta
       name="description"
       content="Finance automation specialist with expertise in reporting & analytics. Self-taught programmer, with MBA from Indian School of Business."
@@ -57,8 +54,13 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
 
     <!-- Preload critical resources -->
-    <link rel="preload" as="image" href="/mac-background.webp" fetchpriority="high" />
-    
+    <link
+      rel="preload"
+      as="image"
+      href="/mac-background.webp"
+      fetchpriority="high"
+    />
+
     <!-- Critical CSS -->
     <style>
       :root {
@@ -241,7 +243,7 @@
         }
       }
     </style>
-    
+
     <!-- Non-blocking font loading -->
     <link
       rel="preload"
@@ -255,7 +257,7 @@
         rel="stylesheet"
       />
     </noscript>
-    
+
     <!-- Non-blocking FontAwesome loading -->
     <link
       rel="preload"
@@ -269,7 +271,7 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       />
     </noscript>
-    
+
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -294,14 +296,14 @@
         "knowsAbout": [
           "Finance Automation",
           "Analytics",
-		  "Machine Learning",
-		  "Data Science",
+          "Machine Learning",
+          "Data Science",
           "Web Development",
           "Programming"
         ],
         "sameAs": [
           "https://www.linkedin.com/in/anandoghose/",
-		  "https://github.com/anandogs",
+          "https://github.com/anandogs",
           "https://www.instagram.com/anandoghose/",
           "https://www.youtube.com/channel/UCb8LzmczkHjCz0Bhvgg-QjA",
           "https://substack.com/@anandoghose"
@@ -345,17 +347,17 @@
               >LinkedIn</span
             >
           </a>
-		  <a
-		  href="https://github.com/anandogs"
-		  class="social-link"
-		  target="_blank"
-		  rel="noopener noreferrer"
-		  aria-label="Connect with me on LinkedIn"
-		>
-		  <i class="fa-brands fa-github"></i><span class="sr-only"
-			>Github</span
-		  >
-		</a>
+          <a
+            href="https://github.com/anandogs"
+            class="social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Connect with me on LinkedIn"
+          >
+            <i class="fa-brands fa-github"></i><span class="sr-only"
+              >Github</span
+            >
+          </a>
           <a
             href="https://www.instagram.com/anandoghose/"
             class="social-link"
@@ -381,7 +383,7 @@
         </div>
       </main>
     </div>
-    
+
     <!-- Defer non-critical JavaScript -->
     <script>
       document.addEventListener("DOMContentLoaded", function () {
@@ -444,6 +446,114 @@
             emailLink.textContent = originalText;
           }, 2000);
         }
+      });
+      const nicknames = [
+        "an automation sage",
+        "a surf n00b",
+        "a dashboard whisperer",
+        "a macro enthusiast",
+        "an aquadreamer",
+        "a gatsby slinger",
+        "a tree-hugger.dev",
+        "a power bi ninja",
+        "a keyboard romantic",
+        "a postgres plotter",
+        "a github ghost",
+        "a farm cloud builder",
+        "an sms hacker",
+        "a loop closer",
+        "a django wrangler",
+        "a qr gardener",
+        "a template rebel",
+        "a slack skeptic",
+        "a zen coder",
+        "a bug whisperer",
+        "a startup survivor",
+        "a pixel hermit",
+        "a manual minimizer",
+        "a notion juggler",
+        "a css therapist",
+        "a docs-over-demos believer",
+        "a feature nerd",
+        "a stack overflow savant",
+        "a meta-ironic observer",
+        "a fast-fail evangelist",
+        "a side quest guru",
+        "an rpa druid",
+        "a 404 avoider",
+        "a code snackifier",
+        "a screenshot historian",
+        "a semi-social technologist",
+        "an automation hypeman",
+        "a flowchart scribbler",
+        "a terminal therapist",
+        "a wifi dependent",
+        "a framework flirt",
+        "a hover-state enthusiast",
+        "a banana-based decision-maker",
+        "the voice of the trees",
+        "a post-lunch debugger",
+        "a slack ping dodger",
+        "a dark mode prophet",
+        "an emoji maximalist",
+        "an alt-tab sprinter",
+        "a low-key cybermonk",
+      ];
+
+      function getRandomNickname() {
+        const randomIndex = Math.floor(Math.random() * nicknames.length);
+        return nicknames[randomIndex];
+      }
+
+      // Function to load the monospace font
+      function loadMonospaceFont() {
+        // Check if font is already loaded
+        if (!document.getElementById("monospace-font-link")) {
+          // Create font link element for a monospace/coding font
+          const fontLink = document.createElement("link");
+          fontLink.id = "monospace-font-link";
+          fontLink.rel = "stylesheet";
+          fontLink.href =
+            "https://fonts.googleapis.com/css2?family=Caveat&display=swap";
+          document.head.appendChild(fontLink);
+        }
+      }
+
+      // Function to update the heading with a random nickname
+      function updateHeadingWithNickname() {
+        // First load the font
+        loadMonospaceFont();
+
+        const h1Element = document.querySelector("h1");
+        if (h1Element) {
+          const randomNickname = getRandomNickname();
+
+          // Clear existing content
+          h1Element.innerHTML = "";
+
+          // Create main text
+          const mainText = document.createTextNode("Hi, I'm Anando, ");
+          h1Element.appendChild(mainText);
+
+          // Create styled element for the nickname
+          const nicknameSpan = document.createElement("span");
+          nicknameSpan.textContent = randomNickname;
+          nicknameSpan.style.fontFamily = "'Caveat', cursive";
+          nicknameSpan.style.fontSize = "0.7em";
+          nicknameSpan.style.fontWeight = "300";
+          nicknameSpan.style.fontStyle = "italic";
+          nicknameSpan.style.letterSpacing = "0.5px";
+          nicknameSpan.style.opacity = "0.9";
+          nicknameSpan.style.color = "#000000";
+
+          // Add nickname to heading
+          h1Element.appendChild(nicknameSpan);
+        }
+      }
+
+      // Run the function when the page loads
+      document.addEventListener("DOMContentLoaded", function () {
+        updateHeadingWithNickname();
       });
     </script>
   </body>
