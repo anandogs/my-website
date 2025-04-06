@@ -1,0 +1,217 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backrooms Phone</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #cfc881; 
+            background-image: 
+                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 100px 100px; 
+            overflow: hidden;
+            position: relative;
+            animation: flicker 8s infinite;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 100%),
+                radial-gradient(circle at 70% 60%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,0.35) 100%);
+            pointer-events: none;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 0.95; filter: brightness(1); }
+            5% { opacity: 0.92; filter: brightness(0.97); }
+            10% { opacity: 0.94; filter: brightness(0.95); }
+            15% { opacity: 0.91; filter: brightness(0.96); }
+            20% { opacity: 0.93; filter: brightness(0.93); }
+            25% { opacity: 0.92; filter: brightness(0.94); }
+            30% { opacity: 0.9; filter: brightness(0.92); }
+            35% { opacity: 0.93; filter: brightness(0.95); }
+            40% { opacity: 0.89; filter: brightness(0.91); }
+            45% { opacity: 0.92; filter: brightness(0.94); }
+            50% { opacity: 0.9; filter: brightness(0.92); }
+            55% { opacity: 0.93; filter: brightness(0.94); }
+            60% { opacity: 0.91; filter: brightness(0.93); }
+            65% { opacity: 0.94; filter: brightness(0.95); }
+            70% { opacity: 0.9; filter: brightness(0.91); }
+            75% { opacity: 0.92; filter: brightness(0.93); }
+            80% { opacity: 0.93; filter: brightness(0.94); }
+            85% { opacity: 0.91; filter: brightness(0.92); }
+            90% { opacity: 0.92; filter: brightness(0.94); }
+            95% { opacity: 0.93; filter: brightness(0.95); }
+        }
+        
+        .phone-container {
+            position: relative;
+            width: min(320px, 90vw); 
+            height: min(650px, 85vh);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .phone {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: perspective(500px) rotateY(0.5deg);
+        }
+        
+        .dark-screen {
+            z-index: 1;
+        }
+        
+        .text-screen {
+            z-index: 2;
+        }
+
+        .static-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.35 0"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 10;
+            mix-blend-mode: multiply;
+        }
+        
+        @keyframes distantSound {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        .ambient-sound {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(255,255,240,0.03) 0%, rgba(0,0,0,0) 50%);
+            opacity: 0;
+            animation: distantSound 8s infinite;
+            animation-delay: calc(var(--delay) * 1s);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @media (max-width: 600px) {
+            .phone-container {
+                width: 90vw;
+                height: 80vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="static-overlay"></div>
+    <div class="ambient-sound" style="--x:30%; --y:70%; --delay:0"></div>
+    <div class="ambient-sound" style="--x:70%; --y:20%; --delay:4"></div>
+    <div class="ambient-sound" style="--x:10%; --y:50%; --delay:12"></div>
+    <div class="phone-container">
+        <img id="dark-screen" class="phone dark-screen" src="/dark-phone.png" alt="Phone with dark screen">
+        <img id="text-screen" class="phone text-screen" src="/text-phone.png" alt="Phone with text">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const darkScreen = document.getElementById('dark-screen');
+            const textScreen = document.getElementById('text-screen');
+            
+            darkScreen!.style.opacity = '1';
+            textScreen!.style.opacity = '0';
+            
+            let currentlyShowing = 'dark';
+            
+            function toggleScreen() {
+                const duration = currentlyShowing === 'dark' 
+                    ? Math.floor(Math.random() * 5000) + 5000   
+                    : Math.floor(Math.random() * 5000) + 10000; 
+                
+                if (Math.random() < 0.25) {
+                    setTimeout(() => {
+                        if (currentlyShowing === 'dark') {
+                            darkScreen!.style.opacity = '0';
+                            setTimeout(() => darkScreen!.style.opacity = '1', 50);
+                        } else {
+                            textScreen!.style.opacity = '0';
+                            setTimeout(() => textScreen!.style.opacity = '1', 50);
+                        }
+                    }, Math.random() * duration);
+                }
+                
+                if (Math.random() < 0.25) {
+                    const phoneContainer = document.querySelector('.phone-container');
+                    
+                    const glitchEffect = Math.random();
+                    if (glitchEffect < 0.3) {
+                        (phoneContainer as HTMLElement)!.style.transform = `scale(${1 + (Math.random() * 0.05 - 0.025)}) skew(${Math.random() * 3 - 1.5}deg)`;
+                    } else if (glitchEffect < 0.6) {
+                        (phoneContainer as HTMLElement)!.style.filter = `hue-rotate(${Math.random() * 10}deg) brightness(${0.9 + Math.random() * 0.2})`;
+                    } else {
+                        (phoneContainer as HTMLElement)!.style.transform = `scale(${1 + (Math.random() * 0.08 - 0.04)}) rotate(${Math.random() * 1 - 0.5}deg) translateY(${Math.random() * 5 - 2.5}px)`;
+                        
+                        document.body.style.boxShadow = `inset 0 0 100px rgba(0,0,0,0.4)`;
+                        setTimeout(() => {
+                            document.body.style.boxShadow = 'inset 0 0 0 rgba(0,0,0,0)';
+                        }, 150);
+                    }
+                    
+                    setTimeout(() => {
+                        (phoneContainer as HTMLElement)!.style.transform = 'scale(1) skew(0deg) rotate(0deg) translateY(0)';
+                        (phoneContainer as HTMLElement)!.style.filter = '';
+                    }, 150);
+                }
+                
+                setTimeout(() => {
+                    if (currentlyShowing === 'dark') {
+                        darkScreen!.style.opacity = '0';
+                        textScreen!.style.opacity = '1';
+                        currentlyShowing = 'text';
+                    } else {
+                        darkScreen!.style.opacity = '1';
+                        textScreen!.style.opacity = '0';
+                        currentlyShowing = 'dark';
+                    }
+                    
+                    toggleScreen();
+                }, duration);
+            }
+            
+            toggleScreen();
+        });
+    </script>
+</body>
+</html>
