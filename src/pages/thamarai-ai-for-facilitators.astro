@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI for Everyone - Training Session</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            min-height: 100vh;
+            padding: 60px 80px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: #e94560;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: #0f3460;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 1.8rem;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        p, li {
+            font-size: 1.8rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            padding-left: 40px;
+        }
+
+        .title-slide {
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: 4.5rem;
+            margin-bottom: 10px;
+        }
+
+        .title-slide h2 {
+            font-size: 3rem;
+            color: #e94560;
+            -webkit-text-fill-color: #e94560;
+        }
+
+        .title-slide h3 {
+            font-size: 2rem;
+            color: #888;
+            margin-top: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 1.5rem;
+        }
+
+        th, td {
+            padding: 20px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #e94560;
+            color: white;
+        }
+
+        tr:hover {
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        code, pre {
+            background: #0f3460;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.4rem;
+            display: block;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .emoji {
+            font-size: 4rem;
+            margin: 20px 0;
+        }
+
+        .highlight {
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .good {
+            color: #2ecc71;
+        }
+
+        .bad {
+            color: #e74c3c;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .nav button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav button.prev {
+            background: #333;
+            color: #fff;
+        }
+
+        .nav button.next {
+            background: #e94560;
+            color: #fff;
+        }
+
+        .nav button:hover {
+            transform: scale(1.1);
+        }
+
+        .nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: #e94560;
+            transition: width 0.3s;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            font-size: 1rem;
+            color: #666;
+        }
+
+        /* Pause indicator */
+        .pause {
+            background: #f39c12;
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        /* Demo indicator */
+        .demo {
+            background: #3498db;
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        /* Two columns */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        /* Center content */
+        .center {
+            text-align: center;
+        }
+
+        /* Big text */
+        .big {
+            font-size: 2.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide title-slide active">
+        <h1>AI for Everyone</h1>
+        <h2>எல்லோருக்கும் AI</h2>
+        <h3>Training Session for Thamarai Facilitators<br>தாமரை உதவியாளர்களுக்கான பயிற்சி</h3>
+    </div>
+
+    <!-- Slide 2: About Me -->
+    <div class="slide">
+        <h1>Who Am I?</h1>
+        <ul>
+            <li>I don't speak Tamil 🙊</li>
+            <li>But I have a helper... <span class="highlight">AI!</span></li>
+            <li>இது எப்படி சாத்தியம்? Let me show you!</li>
+        </ul>
+        <div class="demo">🎤 LIVE DEMO: Use translator app</div>
+    </div>
+
+    <!-- Slide 3: What is AI -->
+    <div class="slide">
+        <h1>What is AI?</h1>
+        <h2>AI என்றால் என்ன?</h2>
+        <p>Think of it like a <span class="highlight">very smart assistant</span> that:</p>
+        <ul>
+            <li>📚 Read millions of books and websites</li>
+            <li>🌍 Learned many languages (including Tamil!)</li>
+            <li>❓ Can answer questions</li>
+            <li>📖 Can help you learn</li>
+        </ul>
+        <p class="big center" style="margin-top: 30px;"><strong>It's NOT magic. It's NOT a person. It's a helpful tool.</strong></p>
+    </div>
+
+    <!-- Slide 4: What AI Can Do -->
+    <div class="slide">
+        <h1>What AI Can Do</h1>
+        <h2>AI என்ன செய்யும்?</h2>
+        <table>
+            <tr><th>English</th><th>Tamil</th></tr>
+            <tr><td>Talk in Tamil</td><td>தமிழில் பேசும்</td></tr>
+            <tr><td>Help practice English</td><td>ஆங்கிலம் பயிற்சி செய்ய உதவும்</td></tr>
+            <tr><td>Explain difficult topics</td><td>கடினமான விஷயங்களை எளிமையாக விளக்கும்</td></tr>
+            <tr><td>Give teaching ideas</td><td>கற்பிக்க யோசனைகள் தரும்</td></tr>
+        </table>
+    </div>
+
+    <!-- Slide 5: What AI Cannot Do -->
+    <div class="slide">
+        <h1>What AI Cannot Do</h1>
+        <h2>AI என்ன செய்ய முடியாது?</h2>
+        <ul>
+            <li><span class="bad">❌</span> Always give correct answers (sometimes makes mistakes!)</li>
+            <li><span class="bad">❌</span> Know about very recent news</li>
+            <li><span class="bad">❌</span> Replace human teachers</li>
+            <li><span class="bad">❌</span> Understand emotions like humans</li>
+        </ul>
+        <p class="big center" style="margin-top: 40px;"><strong>⚠️ Always check important information!</strong></p>
+    </div>
+
+    <!-- Slide 6: Meet ChatGPT -->
+    <div class="slide center">
+        <div class="emoji">🤖</div>
+        <h1>Let's Meet ChatGPT!</h1>
+        <ul style="text-align: left; max-width: 600px; margin: 30px auto;">
+            <li><span class="good">✓</span> Free to use</li>
+            <li><span class="good">✓</span> Works on your phone</li>
+            <li><span class="good">✓</span> Understands Tamil and English</li>
+            <li><span class="good">✓</span> Can help you learn</li>
+        </ul>
+    </div>
+
+    <!-- Slide 7: Opening ChatGPT -->
+    <div class="slide">
+        <h1>Opening ChatGPT</h1>
+        <ol style="font-size: 2rem;">
+            <li>Open your phone browser 📱</li>
+            <li>Go to: <span class="highlight">chat.openai.com</span></li>
+            <li>Sign in with your account</li>
+            <li>You're ready! ✅</li>
+        </ol>
+        <div class="pause">⏸️ PAUSE: Help everyone get to ChatGPT</div>
+    </div>
+
+    <!-- Slide 8: First Message -->
+    <div class="slide">
+        <h1>Your First Message</h1>
+        <p>Type this:</p>
+        <pre>நீங்கள் யார்? தமிழில் பதில் சொல்லுங்கள்.</pre>
+        <p>OR in English:</p>
+        <pre>Who are you? Reply in Tamil.</pre>
+        <div class="pause">⏸️ PAUSE: Everyone tries this!</div>
+    </div>
+
+    <!-- Slide 9: Practice 1 -->
+    <div class="slide">
+        <h1>Practice 1: English Conversation</h1>
+        <p>Type this to ChatGPT:</p>
+        <pre>I want to practice English conversation.
+Ask me simple questions one at a time.
+If I make mistakes, correct me kindly.
+Explain corrections in Tamil.</pre>
+        <div class="pause">⏸️ 15 MINUTES: Everyone practices!</div>
+    </div>
+
+    <!-- Slide 10: Practice 2 -->
+    <div class="slide">
+        <h1>Practice 2: Improve Your Writing</h1>
+        <p>Type something you wrote, then ask:</p>
+        <pre>Please check my English and correct any mistakes.
+Explain the corrections in Tamil.</pre>
+        <p>Example:</p>
+        <pre>"I goes to market yesterday" - please correct this</pre>
+    </div>
+
+    <!-- Slide 11: Practice 3 -->
+    <div class="slide">
+        <h1>Practice 3: Teaching Ideas</h1>
+        <p>Ask ChatGPT for help with teaching:</p>
+        <pre>I teach children aged 5-8 years.
+Give me 3 fun activities to teach English alphabets.
+Explain in simple English and Tamil.</pre>
+        <div class="pause">⏸️ 10 MINUTES: Try your own teaching question!</div>
+    </div>
+
+    <!-- Slide 12: Tips - Specific -->
+    <div class="slide">
+        <h1>Tips: Be Specific</h1>
+        <h2>குறிப்பாக கேளுங்கள்</h2>
+        <div class="two-columns">
+            <div>
+                <p><span class="bad">❌ Bad:</span></p>
+                <pre>"Help me teach"</pre>
+            </div>
+            <div>
+                <p><span class="good">✅ Good:</span></p>
+                <pre>"Give me 3 games to teach numbers 1-10 to 5-year-old children"</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 13: Tips - Tamil -->
+    <div class="slide">
+        <h1>Tips: Ask for Tamil</h1>
+        <h2>தமிழில் கேளுங்கள்</h2>
+        <p>Add to any question:</p>
+        <ul>
+            <li>"Reply in Tamil"</li>
+            <li>"தமிழில் பதில் சொல்லுங்கள்"</li>
+            <li>"Explain in both English and Tamil"</li>
+        </ul>
+    </div>
+
+    <!-- Slide 14: Tips - Follow-up -->
+    <div class="slide">
+        <h1>Tips: Ask Follow-up Questions</h1>
+        <h2>மேலும் கேளுங்கள்</h2>
+        <ul>
+            <li>"Explain more simply"</li>
+            <li>"Give me another example"</li>
+            <li>"I don't understand, explain differently"</li>
+            <li>"இன்னும் எளிமையாக சொல்லுங்கள்"</li>
+        </ul>
+    </div>
+
+    <!-- Slide 15: Web Search -->
+    <div class="slide">
+        <h1>Web Search 🌐</h1>
+        <h2>வலைத் தேடல்</h2>
+        <p>AI doesn't know recent news... <span class="highlight">but Web Search does!</span></p>
+        <p><strong>How to use:</strong> Click the 🌐 globe icon OR type "Search the web for..."</p>
+        <table>
+            <tr><th>Use Web Search For</th><th>Example</th></tr>
+            <tr><td>Current news</td><td>"Search the web for latest education news Tamil Nadu"</td></tr>
+            <tr><td>Recent prices</td><td>"Search the web for current laptop prices"</td></tr>
+            <tr><td>Latest methods</td><td>"Search the web for new teaching methods 2024"</td></tr>
+        </table>
+        <div class="demo">🌐 DEMO: Show web search feature</div>
+    </div>
+
+    <!-- Slide 16: Projects -->
+    <div class="slide">
+        <h1>Projects 📁</h1>
+        <h2>திட்டங்கள்</h2>
+        <p><span class="bad">Problem:</span> Typing "I'm a teacher of 5-8 year olds" every time is boring!</p>
+        <p><span class="good">Solution:</span> <span class="highlight">Projects!</span></p>
+        <ol style="font-size: 1.6rem;">
+            <li>Click "Projects" in sidebar</li>
+            <li>Create new: "My Teaching"</li>
+            <li>Add instructions: "I teach children aged 5-8 at Thamarai. Reply in Tamil and English."</li>
+        </ol>
+        <p class="big center" style="margin-top: 20px;"><strong>Now AI remembers you!</strong></p>
+        <div class="demo">📁 DEMO: Create a project</div>
+    </div>
+
+    <!-- Slide 17: PTCF Method -->
+    <div class="slide">
+        <h1>The PTCF Formula</h1>
+        <h2>PTCF சூத்திரம்</h2>
+        <table>
+            <tr><th>Letter</th><th>Meaning</th><th>Example</th></tr>
+            <tr><td><span class="highlight">P</span></td><td>Persona (who AI should be)</td><td>"Act as a children's teacher"</td></tr>
+            <tr><td><span class="highlight">T</span></td><td>Task (what to do)</td><td>"Create a fun game"</td></tr>
+            <tr><td><span class="highlight">C</span></td><td>Context (background)</td><td>"For 6-year-olds learning numbers"</td></tr>
+            <tr><td><span class="highlight">F</span></td><td>Format (how to answer)</td><td>"Give numbered steps in Tamil"</td></tr>
+        </table>
+    </div>
+
+    <!-- Slide 18: PTCF Example -->
+    <div class="slide">
+        <h1>PTCF Example</h1>
+        <p>Full prompt using PTCF:</p>
+        <pre>Act as a children's teacher.
+Create a fun game for 6-year-olds learning numbers 1-10.
+The children speak Tamil at home.
+Give me step-by-step instructions in a numbered list.
+Explain in both Tamil and English.</pre>
+        <p class="big center" style="margin-top: 30px;"><span class="highlight">Better prompts = Better answers!</span></p>
+    </div>
+
+    <!-- Slide 19: Do's and Don'ts -->
+    <div class="slide">
+        <h1>Do's and Don'ts</h1>
+        <h2>செய்யுங்கள் / செய்யாதீர்கள்</h2>
+        <div class="two-columns">
+            <div>
+                <h3><span class="good">✅ DO</span></h3>
+                <ul style="font-size: 1.4rem;">
+                    <li>Be specific and detailed</li>
+                    <li>Use Projects for context</li>
+                    <li>Use Web Search for current info</li>
+                    <li>Ask follow-up questions</li>
+                    <li>Verify important facts</li>
+                </ul>
+            </div>
+            <div>
+                <h3><span class="bad">❌ DON'T</span></h3>
+                <ul style="font-size: 1.4rem;">
+                    <li>Give vague requests</li>
+                    <li>Trust without verifying</li>
+                    <li>Share passwords/private info</li>
+                    <li>Expect AI to be always right</li>
+                    <li>Give up after one try</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 20: Voice Feature -->
+    <div class="slide center">
+        <div class="emoji">🎤</div>
+        <h1>The Voice Feature</h1>
+        <ol style="text-align: left; max-width: 600px; margin: 30px auto; font-size: 1.8rem;">
+            <li>Tap the microphone icon 🎤</li>
+            <li>Speak in English or Tamil</li>
+            <li>ChatGPT will respond</li>
+            <li>Tap speaker icon to hear response 🔊</li>
+        </ol>
+        <div class="demo">🎤 DEMO: Show voice feature</div>
+    </div>
+
+    <!-- Slide 21: Daily Practice Plan -->
+    <div class="slide">
+        <h1>My Daily Practice Plan</h1>
+        <h2>Commit to 10 minutes daily!</h2>
+        <table>
+            <tr><th>Option</th><th>What to do</th></tr>
+            <tr><td>Morning English</td><td>5 questions to ChatGPT in English</td></tr>
+            <tr><td>Writing Check</td><td>Write 3 sentences, ask ChatGPT to correct</td></tr>
+            <tr><td>Teaching Prep</td><td>Ask for 1 teaching idea daily</td></tr>
+            <tr><td>Tamil to English</td><td>Translate 5 Tamil sentences to English</td></tr>
+        </table>
+    </div>
+
+    <!-- Slide 22: Commitment -->
+    <div class="slide">
+        <h1>My Commitment</h1>
+        <h2>என் உறுதிமொழி</h2>
+        <p>Send this message in our WhatsApp group:</p>
+        <pre>My name: ___
+I will practice: ___ (which option?)
+Time: ___ (when daily?)
+For: 10 minutes</pre>
+        <div class="pause">⏸️ PAUSE: Everyone sends their commitment in the WhatsApp group</div>
+    </div>
+
+    <!-- Slide 23: Getting Help -->
+    <div class="slide">
+        <h1>Getting Help</h1>
+        <div class="two-columns">
+            <div>
+                <h3>If ChatGPT doesn't understand:</h3>
+                <ul>
+                    <li>Try simpler words</li>
+                    <li>Try in Tamil</li>
+                    <li>Rephrase your question</li>
+                </ul>
+            </div>
+            <div>
+                <h3>If you need help:</h3>
+                <ul>
+                    <li>Ask colleagues who use AI</li>
+                    <li>Ask the facilitator</li>
+                    <li>Practice together!</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 24: Remember -->
+    <div class="slide">
+        <h1>Remember</h1>
+        <ul style="font-size: 2rem; line-height: 2;">
+            <li>AI is a <span class="highlight">tool</span> to help you learn</li>
+            <li>Practice a little <span class="highlight">every day</span></li>
+            <li><span class="highlight">Ask questions</span> - that's how you learn!</li>
+            <li>Make <span class="highlight">mistakes</span> - AI will help correct them</li>
+            <li>Help <span class="highlight">each other</span> learn</li>
+        </ul>
+    </div>
+
+    <!-- Slide 25: Questions -->
+    <div class="slide center">
+        <div class="emoji">❓</div>
+        <h1>Questions?</h1>
+        <h2>கேள்விகள்?</h2>
+        <p class="big">Let's answer any doubts together!</p>
+    </div>
+
+    <!-- Slide 26: Thank You -->
+    <div class="slide title-slide">
+        <h1>Thank You!</h1>
+        <h2>நன்றி!</h2>
+        <p class="big" style="margin-top: 40px;">Start practicing today!<br>இன்றே பயிற்சி தொடங்குங்கள்!</p>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button class="prev">← Previous</button>
+        <button class="next">Next →</button>
+    </div>
+
+    <div class="progress" id="progress"></div>
+    <div class="slide-counter" id="counter">1 / 26</div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+            document.getElementById('counter').textContent = `${currentSlide + 1} / ${totalSlides}`;
+
+            document.querySelector('.prev').disabled = currentSlide === 0;
+            document.querySelector('.next').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1);
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) showSlide(currentSlide - 1);
+        }
+
+        document.querySelector('.prev').addEventListener('click', prevSlide);
+        document.querySelector('.next').addEventListener('click', nextSlide);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        let touchStartX = 0;
+        document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+        document.addEventListener('touchend', e => {
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) nextSlide();
+                else prevSlide();
+            }
+        });
+
+        showSlide(0);
+    </script>
+</body>
+</html>
