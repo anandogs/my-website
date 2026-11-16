@@ -1,0 +1,61 @@
+import type { SceneId } from "./scenes";
+
+// `scene` ties a nickname to the part of the day it belongs to; untagged ones
+// can turn up anywhere.
+export interface Nickname {
+  text: string;
+  scene?: SceneId;
+}
+
+export const nicknames: Nickname[] = [
+  { text: "an automation sage", scene: "work" },
+  { text: "a surf n00b", scene: "surf" },
+  { text: "a dashboard whisperer", scene: "work" },
+  { text: "a macro enthusiast", scene: "work" },
+  { text: "an aquadreamer", scene: "surf" },
+  { text: "a gatsby slinger", scene: "work" },
+  { text: "a tree-hugger.dev", scene: "farm" },
+  { text: "a power bi ninja", scene: "work" },
+  { text: "a keyboard romantic", scene: "work" },
+  { text: "a postgres plotter", scene: "work" },
+  { text: "a github ghost", scene: "work" },
+  { text: "a farm cloud builder", scene: "farm" },
+  { text: "an sms hacker", scene: "work" },
+  { text: "a loop closer" },
+  { text: "a django wrangler", scene: "work" },
+  { text: "a qr gardener", scene: "farm" },
+  { text: "a template rebel" },
+  { text: "a slack skeptic", scene: "work" },
+  { text: "a zen coder" },
+  { text: "a bug whisperer", scene: "work" },
+  { text: "a startup survivor" },
+  { text: "a pixel hermit" },
+  { text: "a manual minimizer", scene: "work" },
+  { text: "a notion juggler", scene: "work" },
+  { text: "a css therapist", scene: "work" },
+  { text: "a docs-over-demos believer", scene: "work" },
+  { text: "a feature nerd" },
+  { text: "a stack overflow savant", scene: "work" },
+  { text: "a meta-ironic observer" },
+  { text: "a fast-fail evangelist" },
+  { text: "a side quest guru" },
+  { text: "an rpa druid", scene: "work" },
+  { text: "a 404 avoider", scene: "work" },
+  { text: "a code snackifier", scene: "work" },
+  { text: "a screenshot historian", scene: "work" },
+  { text: "a semi-social technologist" },
+  { text: "an automation hypeman", scene: "work" },
+  { text: "a flowchart scribbler", scene: "work" },
+  { text: "a terminal therapist", scene: "work" },
+  { text: "a wifi dependent" },
+  { text: "a framework flirt", scene: "work" },
+  { text: "a hover-state enthusiast", scene: "work" },
+  { text: "a banana-based decision-maker" },
+  { text: "the voice of the trees", scene: "farm" },
+  { text: "a post-lunch debugger", scene: "work" },
+  { text: "a slack ping dodger", scene: "work" },
+  { text: "a dark mode prophet", scene: "work" },
+  { text: "an emoji maximalist" },
+  { text: "an alt-tab sprinter", scene: "work" },
+  { text: "a low-key cybermonk" },
+];

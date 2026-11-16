@@ -1,0 +1,1090 @@
+---
+// Low-poly Anando going about a simulated day, paced by a clock that only shows
+// as the wall clock over his desk:
+// desk in the morning, farm from 1 pm, a sunset surf, then night sweeps round to
+// morning again. Fills its parent; the parent decides the size. The timeline,
+// the sky and every scene's facing and framing are in src/data/scenes.ts.
+//
+// Talks to the page through the document, so neither needs a handle on the other:
+//   <html data-scene="work|farm|surf">   current scene
+//   <html data-character="ready|failed"> set once the model is up, or never will be
+//   --paper, --ink, --sun-x … on <html>  the palette of the current time of day
+//   "character:scene" / "character:tap"  bubbling events, detail: { id }
+import { scenes } from "../data/scenes";
+
+---
+
+<div class="character-stage" data-character-stage>
+  <div
+    class="character"
+    data-character
+    role="img"
+    aria-label={`A low-poly 3D figure of Anando, ${scenes[0].alt}.`}
+  >
+    <canvas></canvas>
+  </div>
+
+  <p class="hint" data-hint aria-hidden="true">drag to spin · click to say hi</p>
+
+  <button type="button" class="pause" data-pause aria-pressed="false" aria-label="Pause the animation">
+    <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+      <path class="icon-pause" d="M2 1h3v10H2zM7 1h3v10H7z"></path>
+      <path class="icon-play" d="M2.5 1l8 5-8 5z"></path>
+    </svg>
+  </button>
+</div>
+
+<style>
+  .character-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .character {
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    /* ground that reaches the side of the stage dissolves instead of ending in a cut */
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  }
+  .character.is-dragging {
+    cursor: grabbing;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Nothing shows until the model is on screen, so a slow or failed load is just an empty stage. */
+  .character-stage > * {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .character-stage.is-ready > * {
+    opacity: 1;
+  }
+  .character-stage:not(.is-ready) .pause {
+    visibility: hidden;
+  }
+
+  .hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.1rem;
+    margin: 0;
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 1.2rem;
+    color: var(--ink-soft, #6a5443);
+    pointer-events: none;
+    /* stays readable where it overlaps the rug, grass or water */
+    text-shadow:
+      0 0 0.3em var(--paper, #f1e7d6),
+      0 0 0.6em var(--paper, #f1e7d6);
+  }
+  .character-stage.is-ready .hint.is-hidden {
+    opacity: 0;
+  }
+
+  .pause {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--paper, #f1e7d6) 78%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink, #2b1c12) 14%, transparent);
+    color: var(--ink, #2b1c12);
+    cursor: pointer;
+  }
+  .pause:hover {
+    background: var(--paper, #f1e7d6);
+  }
+  .pause:focus-visible {
+    outline: 3px solid var(--accent, #b23026);
+    outline-offset: 2px;
+  }
+  .pause svg {
+    fill: currentColor;
+  }
+  .pause[aria-pressed="false"] .icon-play,
+  .pause[aria-pressed="true"] .icon-pause {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* nothing moves by itself, so there is nothing to pause */
+    .pause {
+      display: none;
+    }
+    .character-stage > * {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { scenes, night, sky, timing } from "../data/scenes";
+
+  // ---- LEGACY FALLBACK (delete with its one use below once the per-scene models ship) ----
+  // The single model that carries all three scenes' clips and props.
+  const LEGACY_MODEL = "/models/anando.glb";
+  // ------------------------------------------------------------------------------------
+
+  const FOV = 28;
+  const TAU = Math.PI * 2;
+  // Share of the stage height kept below his feet; never less than the hint needs.
+  const FEET_FROM_BOTTOM = 0.18;
+  const FEET_MIN_PX = 64;
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const smooth = (t: number) => t * t * (3 - 2 * t);
+  const easeOutBack = (t: number) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
+  const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
+
+  // The day as stretches of real time: each scene, then the night that wraps it round.
+  // `scene` is an index into `scenes`, or -1 for the empty stage at night.
+  const segments = (() => {
+    let at = 0;
+    const list = scenes.map((s, i) => ({ scene: i, from: s.from, to: scenes[i + 1]?.from ?? night.from, seconds: s.seconds }));
+    list.push({ scene: -1, from: night.from, to: scenes[0].from + 24, seconds: night.seconds });
+    return list.map((s) => ({ ...s, start: at, end: (at += s.seconds) }));
+  })();
+
+  async function mount(stage: HTMLElement) {
+    const host = stage.querySelector<HTMLElement>("[data-character]")!;
+    const canvas = host.querySelector("canvas")!;
+    const hint = stage.querySelector<HTMLElement>("[data-hint]");
+    const pauseButton = stage.querySelector<HTMLButtonElement>("[data-pause]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const THREE = await import("three");
+    const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 50);
+
+    const fill = new THREE.HemisphereLight();
+    scene.add(fill);
+    const sun = new THREE.DirectionalLight();
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -2.4;
+    sun.shadow.camera.right = sun.shadow.camera.top = 2.4;
+    sun.shadow.radius = 6;
+    sun.shadow.normalBias = 0.03;
+    scene.add(sun);
+
+    const shadowCatcher = new THREE.Mesh(
+      new THREE.CircleGeometry(3.5, 48),
+      // no depth write: it must not hide the troughs of the water that dip below it
+      new THREE.ShadowMaterial({ opacity: 0.22, depthWrite: false }),
+    );
+    shadowCatcher.rotation.x = -Math.PI / 2;
+    shadowCatcher.receiveShadow = true;
+    scene.add(shadowCatcher);
+
+    const flat = (color: number, extra = {}) =>
+      new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 1, ...extra });
+
+    const sceneIndex = (id: string) => scenes.findIndex((s) => s.id === id);
+    const WORK = sceneIndex("work");
+    const FARM = sceneIndex("farm");
+    const SURF = sceneIndex("surf");
+
+    // `seg` indexes `segments`; `index` is the scene on stage (-1 at night).
+    const state = { seg: 0, index: 0, dayClock: 0, paused: false, waving: false, onAlso: false };
+    let time = 0;
+
+    // ---- Things that pop in and out with a scene -------------------------------
+    // The character himself, his props, and the bits of world built below.
+    // `t` runs 0 (gone) → 1 (in place).
+    interface Item {
+      obj: any;
+      scale: any;
+      y: number;
+      sink: number;
+      t: number;
+      wait: number;
+    }
+    const items: Item[][] = scenes.map(() => []);
+    const addItem = (index: number, obj: any, sink = 0) => {
+      obj.visible = false;
+      items[index].push({ obj, scale: obj.scale.clone(), y: obj.position.y, sink, t: 0, wait: 0 });
+    };
+    // Stagger a scene's arrivals from the ground up.
+    function queueItems(index: number, delay: number) {
+      [...items[index]]
+        .sort((a, b) => a.y - b.y)
+        .forEach((item, i, list) => (item.wait = delay + (i / Math.max(1, list.length - 1)) * timing.stagger));
+    }
+
+    // ---- One character per scene ---------------------------------------------------
+    // Each scene has its own model (own clothes, own props) and therefore its own
+    // mixer: the files share bone names, so they can never share an animation root.
+    interface Tile {
+      obj: any;
+      scale: any;
+      y: number;
+      t: number;
+      emphasis: number;
+      mats: any[];
+    }
+    interface Actor {
+      root: any;
+      mixer: any;
+      loop: any;
+      wave: any;
+      also: any;
+      active: any;
+      hips: any;
+      lids: any[];
+      mouths: Record<string, any>;
+      tiles: Tile[];
+      sprouts: { obj: any; rest: any }[];
+      spout: any;
+      can: any;
+      glow: any;
+      clock: { hour: any; minute: any } | null;
+    }
+    const actors: (Actor | null)[] = scenes.map(() => null);
+    const status: ("pending" | "ready" | "failed")[] = scenes.map(() => "pending");
+    const current = () => (state.index >= 0 ? actors[state.index] : null);
+    // what he goes back to after a wave: the scene loop, or its second activity if that's on
+    const baseAction = (actor: Actor) => (state.onAlso && actor.also && actor === current() ? actor.also : actor.loop);
+    function fadeTo(actor: Actor, next: any, seconds: number) {
+      if (next === actor.active) return;
+      next.reset().play();
+      actor.active.crossFadeTo(next, seconds, false);
+      actor.active = next;
+    }
+
+    function buildActor(index: number, gltf: any): Actor {
+      const cfg = scenes[index];
+      const root = gltf.scene;
+      // yaw first, then tilt in his own frame, so the surf roll follows the board
+      root.rotation.order = "YXZ";
+      root.traverse((o: any) => {
+        // a shared model also carries the other scenes' props: never show those here
+        if (o.name.startsWith("Prop_") && !o.name.startsWith(cfg.props)) o.visible = false;
+        if (!o.isMesh) return;
+        o.castShadow = true;
+        o.receiveShadow = o.name.startsWith("Prop_");
+        o.frustumCulled = false; // skinned bounds are unreliable
+        // props are faceted low-poly; his body and face stay smooth
+        o.material.flatShading = o.name.startsWith("Prop_");
+        o.material.metalness = 0;
+        o.material.roughness = 1;
+        o.material.needsUpdate = true;
+      });
+
+      const tiles: Tile[] = [];
+      const tileName = cfg.also?.tiles ? new RegExp(`^${cfg.also.tiles}\\d+$`) : null;
+      const propsRoot = root.getObjectByName(cfg.props);
+      const rig = root.getObjectByName("AnandoRig");
+      if (rig) addItem(index, rig, 0.3);
+      root.traverse((o: any) => {
+        if (tileName?.test(o.name)) {
+          const mats: any[] = [];
+          o.traverse((part: any) => {
+            if (!part.isMesh) return;
+            // own copy, so one tile can light up as the speaker without the others
+            part.material = part.material.clone();
+            mats.push(part.material);
+          });
+          o.visible = false;
+          tiles.push({ obj: o, scale: o.scale.clone(), y: o.position.y, t: 0, emphasis: 0, mats });
+        }
+        if (o === propsRoot || !o.name.startsWith(cfg.props)) return;
+        // tiles come and go with the call, not with the scene
+        if (cfg.also?.tiles && o.name.startsWith(cfg.also.tiles)) return;
+        // nested prop parts ride along with their nearest prop ancestor
+        if (o.parent !== propsRoot && o.parent.name.startsWith(cfg.props)) return;
+        // only props standing on the ground sink into it; the can lives in his hand
+        addItem(index, o, o.parent === propsRoot ? 0.25 : 0);
+      });
+
+      const mixer = new THREE.AnimationMixer(root);
+      const clipAction = (name: string) => {
+        const clip = gltf.animations.find((a: any) => a.name === name);
+        return clip ? mixer.clipAction(clip) : null;
+      };
+      const loop = clipAction(cfg.clip);
+      if (!loop) throw new Error(`${cfg.id} model has no "${cfg.clip}" clip`);
+      const wave = clipAction(`${cfg.clip}_Hi`);
+      if (wave) {
+        wave.setLoop(THREE.LoopOnce, 1);
+        wave.clampWhenFinished = true; // hold the last (rest) pose while the loop fades back in
+      }
+      // a second activity that needs tiles (the call) only runs if they exist
+      const also = cfg.also && (!cfg.also.tiles || tiles.length) ? clipAction(cfg.also.clip) : null;
+
+      const lids = ["Blink_L", "Blink_R"].map((n) => root.getObjectByName(n)).filter(Boolean);
+      lids.forEach((lid: any) => (lid.visible = false));
+      const mouths = Object.fromEntries(
+        ["Neutral", "Smile", "Open"].map((m) => [m, root.getObjectByName(`Mouth_${m}`)]).filter(([, o]) => o),
+      );
+
+      const sprouts: Actor["sprouts"] = [];
+      root.traverse((o: any) => {
+        if (/^Prop_Farm_Sprout\d+$/.test(o.name)) sprouts.push({ obj: o, rest: o.rotation.clone() });
+      });
+
+      // the screen on his face
+      const glowPoint = root.getObjectByName("Prop_Laptop_GlowPoint");
+      const glow = glowPoint ? new THREE.PointLight(0x9cc4ff, 0, 1.6, 0.5) : null;
+      if (glow) glowPoint.add(glow);
+
+      let clock: Actor["clock"] = null;
+      if (index === WORK) {
+        const wall = makeWallClock(cfg.homeYaw);
+        root.add(wall.pivot);
+        addItem(index, wall.face);
+        clock = wall.hands;
+      }
+      if (index === FARM) {
+        const meadow = makeMeadow();
+        root.add(meadow);
+        addItem(index, meadow);
+      }
+
+      const actor: Actor = {
+        root,
+        mixer,
+        loop,
+        wave,
+        also,
+        active: loop,
+        hips: root.getObjectByName("Hips"),
+        lids,
+        mouths,
+        tiles,
+        sprouts,
+        spout: root.getObjectByName("Spout"),
+        can: root.getObjectByName("Prop_Farm_Can"),
+        glow,
+        clock,
+      };
+      mixer.addEventListener("finished", (e: any) => {
+        if (e.action !== actor.active) return;
+        if (actor === current()) {
+          state.waving = false;
+          smileUntil = time + 1.5;
+        }
+        fadeTo(actor, baseAction(actor), 0.3);
+      });
+      loop.play();
+      root.visible = false;
+      scene.add(root);
+      return actor;
+    }
+
+    // ---- Desk: a wall clock, dust in the morning light --------------------------------
+    // The only place the day's clock is ever shown. Real size (30 cm), hung where a
+    // wall would be: behind him, above head height, off to one side of his head.
+    function makeWallClock(homeYaw: number) {
+      // undo the scene's resting turn, so the clock faces the camera when he is at rest
+      const pivot = new THREE.Group();
+      pivot.rotation.y = -homeYaw;
+      const face = new THREE.Group();
+      face.position.set(-0.72, 1.86, -0.7);
+      pivot.add(face);
+      const disc = (radius: number, depth: number, color: number, z: number, extra = {}) => {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 20), flat(color, extra));
+        mesh.rotation.x = Math.PI / 2;
+        mesh.position.z = z;
+        mesh.castShadow = true;
+        face.add(mesh);
+      };
+      disc(0.158, 0.03, 0x4a3f3a, 0); // rim
+      // white face, proud of the rim; lit a little from within so warm light can't turn it beige
+      disc(0.145, 0.03, 0xffffff, 0.004, { emissive: 0xffffff, emissiveIntensity: 0.45 });
+      const dark = flat(0x2b2422);
+      for (let i = 0; i < 12; i++) {
+        const quarter = i % 3 === 0;
+        const tick = new THREE.Mesh(new THREE.BoxGeometry(quarter ? 0.012 : 0.006, quarter ? 0.03 : 0.018, 0.002), dark);
+        const a = (i / 12) * TAU;
+        tick.position.set(Math.sin(a) * 0.122, Math.cos(a) * 0.122, 0.02);
+        tick.rotation.z = -a;
+        face.add(tick);
+      }
+      const hand = (length: number, width: number, z: number) => {
+        const turn = new THREE.Group();
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, length, 0.003), dark);
+        mesh.position.set(0, length / 2 - 0.015, z); // a short tail past the pin
+        turn.add(mesh);
+        face.add(turn);
+        return turn;
+      };
+      const hands = { hour: hand(0.085, 0.014, 0.023), minute: hand(0.125, 0.009, 0.027) };
+      disc(0.012, 0.012, 0x2b2422, 0.026); // pin
+      return { pivot, face, hands };
+    }
+
+    // ---- Desk: dust in the morning light ----------------------------------------------
+    const MOTES = 14;
+    const motes = new THREE.InstancedMesh(
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.MeshBasicMaterial({ color: 0xfff4cf, transparent: true, opacity: 0.8 }),
+      MOTES,
+    );
+    motes.frustumCulled = false;
+    const moteSeeds = Array.from({ length: MOTES }, () => ({
+      x: rand(-1.1, 0.5),
+      y: rand(0.5, 1.9),
+      z: rand(-0.3, 0.7),
+      phase: rand(0, TAU),
+      speed: rand(0.15, 0.4),
+    }));
+    scene.add(motes);
+    addItem(WORK, motes);
+
+    // ---- Farm: a patch of meadow, butterflies, water from the can -----------------
+    function makeMeadow() {
+      const meadow = new THREE.Group();
+      const grassGeo = new THREE.CircleGeometry(1.45, 13);
+      for (let i = 1; i < grassGeo.attributes.position.count; i++) {
+        const k = rand(0.9, 1.06);
+        grassGeo.attributes.position.setXY(
+          i,
+          grassGeo.attributes.position.getX(i) * k,
+          grassGeo.attributes.position.getY(i) * k,
+        );
+      }
+      const grass = new THREE.Mesh(grassGeo, flat(0xa3c56f));
+      grass.rotation.x = -Math.PI / 2;
+      grass.position.set(-0.1, 0.004, 0.15);
+      grass.scale.y = 0.85; // a little shallower front to back
+      grass.receiveShadow = true;
+      meadow.add(grass);
+      const tuftGeo = new THREE.ConeGeometry(0.04, 0.16, 4);
+      const tuftMat = flat(0x6f9e4a);
+      for (let i = 0; i < 9; i++) {
+        // behind and beside him, clear of the seed bed in front
+        const a = rand(Math.PI * 0.05, Math.PI * 0.95) + Math.PI;
+        const r = rand(0.75, 1.25);
+        for (let j = 0; j < 3; j++) {
+          const tuft = new THREE.Mesh(tuftGeo, tuftMat);
+          tuft.position.set(Math.cos(a) * r + rand(-0.05, 0.05), 0.07, Math.sin(a) * r + rand(-0.05, 0.05));
+          tuft.rotation.set(rand(-0.3, 0.3), rand(0, TAU), rand(-0.3, 0.3));
+          tuft.scale.setScalar(rand(0.7, 1.2));
+          tuft.castShadow = true;
+          meadow.add(tuft);
+        }
+      }
+      return meadow;
+    }
+
+    const wingGeo = new THREE.BufferGeometry();
+    wingGeo.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([0, 0, 0.04, 0, 0, -0.035, 0.08, 0, -0.05, 0, 0, 0.04, 0.08, 0, -0.05, 0.06, 0, 0.05], 3),
+    );
+    wingGeo.computeVertexNormals();
+    const butterflies = [0xf2a33a, 0xfbf3e2].map((color, i) => {
+      const body = new THREE.Group();
+      const mat = flat(color, { side: THREE.DoubleSide });
+      const right = new THREE.Mesh(wingGeo, mat);
+      const left = new THREE.Mesh(wingGeo, mat);
+      left.scale.x = -1;
+      body.add(right, left);
+      scene.add(body);
+      addItem(FARM, body);
+      return { body, right, left, phase: i * 2.4, last: new THREE.Vector3() };
+    });
+
+    // ---- Surf: faceted water that the board actually rides -------------------------
+    const WATER_R = 1.8;
+    const WATER_SEG = 22;
+    const swell = (x: number, z: number, t: number) =>
+      0.045 * Math.sin(1.9 * x + 0.8 * z + 2.2 * t) +
+      0.03 * Math.sin(-1.1 * x + 2.7 * z + 1.6 * t) +
+      0.014 * Math.sin(4.1 * x - 1.3 * z + 3.3 * t);
+    const grid = new THREE.PlaneGeometry(WATER_R * 2, WATER_R * 2, WATER_SEG, WATER_SEG);
+    grid.rotateX(-Math.PI / 2);
+    for (let i = 0; i < grid.attributes.position.count; i++) {
+      // knock the grid off-square so the facets don't read as a mesh
+      const j = (WATER_R * 2) / WATER_SEG / 3;
+      grid.attributes.position.setX(i, grid.attributes.position.getX(i) + rand(-j, j));
+      grid.attributes.position.setZ(i, grid.attributes.position.getZ(i) + rand(-j, j));
+    }
+    // un-shared vertices, so every triangle can carry its own colour
+    const waterGeo = grid.toNonIndexed();
+    const waterPos = waterGeo.attributes.position;
+    const waterColor = new THREE.BufferAttribute(new Float32Array(waterPos.count * 4), 4);
+    waterGeo.setAttribute("color", waterColor);
+    const faceTint = new Float32Array(waterPos.count / 3);
+    for (let i = 0; i < waterPos.count; i++) {
+      const r = Math.hypot(waterPos.getX(i), waterPos.getZ(i)) / WATER_R;
+      // fade out before the edge so the pool never ends in a hard line
+      waterColor.setW(i, 0.95 * (1 - smooth(clamp((r - 0.7) / 0.3, 0, 1))));
+      if (i % 3 === 0) faceTint[i / 3] = rand(-0.12, 0.12);
+    }
+    const water = new THREE.Mesh(
+      waterGeo,
+      flat(0xffffff, { vertexColors: true, transparent: true, depthWrite: false, roughness: 0.9 }),
+    );
+    water.receiveShadow = true;
+    scene.add(water);
+    addItem(SURF, water);
+    const deep = new THREE.Color(0x1d8fae);
+    const shallow = new THREE.Color(0x7fd8d0);
+    const foam = new THREE.Color(0xf4fffb);
+    const tint = new THREE.Color();
+    function updateWater(t: number) {
+      for (let f = 0; f < waterPos.count; f += 3) {
+        let mean = 0;
+        for (let i = f; i < f + 3; i++) {
+          const h = swell(waterPos.getX(i), waterPos.getZ(i), t);
+          waterPos.setY(i, h);
+          mean += h / 3;
+        }
+        const crest = clamp(mean / 0.075, -1, 1) * 0.5 + 0.5 + faceTint[f / 3];
+        tint.copy(deep).lerp(shallow, clamp(crest, 0, 1));
+        if (crest > 0.9) tint.lerp(foam, clamp((crest - 0.9) / 0.15, 0, 1));
+        for (let i = f; i < f + 3; i++) waterColor.setXYZ(i, tint.r, tint.g, tint.b);
+      }
+      waterPos.needsUpdate = true;
+      waterColor.needsUpdate = true;
+    }
+    updateWater(0);
+
+    // Small faceted bits that fly and fall: spray off the board, water from the can.
+    function makeParticles(count: number, color: number, size: number) {
+      const mesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(1), flat(color, { roughness: 0.6 }), count);
+      mesh.frustumCulled = false;
+      const pool = Array.from({ length: count }, () => ({
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        age: 0,
+        life: 0,
+      }));
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      const s = new THREE.Vector3();
+      let next = 0;
+      scene.add(mesh);
+      return {
+        spawn(pos: any, vel: any, life: number) {
+          const p = pool[next];
+          next = (next + 1) % count;
+          p.pos.copy(pos);
+          p.vel.copy(vel);
+          p.age = 0;
+          p.life = life;
+        },
+        update(dt: number, gravity: number, floor: number) {
+          pool.forEach((p, i) => {
+            if (p.age < p.life) {
+              p.age += dt;
+              p.vel.y -= gravity * dt;
+              p.pos.addScaledVector(p.vel, dt);
+              if (p.pos.y < floor) p.age = p.life;
+            }
+            const k = p.age < p.life ? Math.sqrt(Math.sin((Math.PI * p.age) / p.life)) : 0;
+            mesh.setMatrixAt(i, m.compose(p.pos, q, s.setScalar(size * k)));
+          });
+          mesh.instanceMatrix.needsUpdate = true;
+        },
+      };
+    }
+    const spray = makeParticles(36, 0xffffff, 0.03);
+    const drops = makeParticles(28, 0x69bfe6, 0.022);
+    spray.update(0, 0, 0);
+    drops.update(0, 0, 0);
+
+    // a burst that covers him leaving and arriving
+    const puff = makeParticles(22, 0xfff7e6, 0.04);
+    puff.update(0, 0, 0);
+
+    // ---- Load: the first scene gates first paint, the rest follow in the background ----
+    const loader = new GLTFLoader();
+    async function load(index: number, url: string) {
+      actors[index] = buildActor(index, await loader.loadAsync(url));
+      status[index] = "ready";
+    }
+    let modelFor = (index: number) => scenes[index].model;
+    try {
+      await load(0, modelFor(0));
+    } catch {
+      // ---- LEGACY FALLBACK: no per-scene models yet, so one copy of the old model per scene ----
+      modelFor = () => LEGACY_MODEL;
+      await load(0, modelFor(0));
+      // -----------------------------------------------------------------------------------------
+    }
+    scenes.forEach((_, i) => {
+      // a scene whose model never arrives is skipped when its time comes
+      if (i > 0) load(i, modelFor(i)).catch(() => (status[i] = "failed"));
+    });
+
+    // ---- The day -------------------------------------------------------------------------
+    function announce() {
+      const cfg = scenes[state.index];
+      if (cfg) document.documentElement.dataset.scene = cfg.id;
+      host.setAttribute(
+        "aria-label",
+        cfg ? `A low-poly 3D figure of Anando, ${cfg.alt}.` : "An empty stage: night is passing until Anando's next morning.",
+      );
+    }
+
+    const puffAt = new THREE.Vector3();
+    let puffDue = Infinity;
+    function goTo(index: number) {
+      const leaving = current();
+      state.index = index;
+      state.waving = false;
+      state.onAlso = false;
+      if (leaving) {
+        // he goes off to get changed in a puff …
+        (leaving.hips ?? leaving.root).getWorldPosition(puffAt);
+        puffDue = time + timing.propsOut * 0.5;
+      }
+      const actor = current();
+      if (actor) {
+        actor.mixer.stopAllAction();
+        actor.active = actor.loop;
+        actor.loop.reset().play();
+        queueItems(index, leaving ? timing.propsInDelay : 0.15);
+        if (!leaving) {
+          // … or, in the morning, simply turns up in one
+          puffAt.set(0, 0.9, 0);
+          puffDue = time + 0.15;
+        }
+        if (index === SURF) nextSmile = Math.min(nextSmile, time + 1);
+        stage.dispatchEvent(new CustomEvent("character:scene", { bubbles: true, detail: { id: scenes[index].id } }));
+      }
+      announce();
+    }
+
+    function advanceDay(dt: number) {
+      const seg = segments[state.seg];
+      state.dayClock += dt;
+      if (state.dayClock < seg.end) return;
+      let next = (state.seg + 1) % segments.length;
+      while (segments[next].scene >= 0 && status[segments[next].scene] === "failed") next = (next + 1) % segments.length;
+      if (segments[next].scene >= 0 && status[segments[next].scene] === "pending") {
+        // its model is still on the way: stay where we are a little longer, clock held
+        state.dayClock = seg.end;
+        return;
+      }
+      state.seg = next;
+      state.dayClock = segments[next].start;
+      goTo(segments[next].scene);
+    }
+    // Clock time now, in hours since midnight of the day's first morning (so 26 = 2 am).
+    function clockNow() {
+      const seg = segments[state.seg];
+      const p = clamp((state.dayClock - seg.start) / seg.seconds, 0, 1);
+      // night is a sweep of the hands: ease in and out of it
+      return seg.from + (seg.to - seg.from) * (seg.scene < 0 ? smooth(p) : p);
+    }
+
+    function sayHi() {
+      const actor = current();
+      if (!actor?.wave || state.waving || reduceMotion || state.paused) return;
+      state.waving = true;
+      fadeTo(actor, actor.wave, 0.25);
+    }
+
+    pauseButton?.addEventListener("click", () => {
+      state.paused = !state.paused;
+      pauseButton.setAttribute("aria-pressed", String(state.paused));
+      pauseButton.setAttribute("aria-label", state.paused ? "Play the animation" : "Pause the animation");
+      schedule();
+    });
+
+    // Drag to spin; a press that never moves counts as a tap.
+    const spin = { yaw: scenes[0].homeYaw, velocity: 0, dragging: false };
+    let downX = 0;
+    let lastX = 0;
+    let moved = 0;
+    host.addEventListener("pointerdown", (e) => {
+      spin.dragging = true;
+      downX = lastX = e.clientX;
+      moved = 0;
+      host.classList.add("is-dragging");
+      host.setPointerCapture(e.pointerId);
+      hint?.classList.add("is-hidden");
+    });
+    host.addEventListener("pointermove", (e) => {
+      if (!spin.dragging || reduceMotion) return;
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+      moved = Math.max(moved, Math.abs(e.clientX - downX));
+      spin.yaw += dx * 0.012;
+      spin.velocity = dx * 0.012;
+    });
+    const release = (tapped: boolean) => {
+      if (!spin.dragging) return;
+      spin.dragging = false;
+      host.classList.remove("is-dragging");
+      if (!tapped || state.index < 0) return;
+      sayHi();
+      host.dispatchEvent(
+        new CustomEvent("character:tap", { bubbles: true, detail: { id: scenes[state.index].id } }),
+      );
+    };
+    host.addEventListener("pointerup", () => release(moved < 6));
+    // the browser took the gesture for a scroll: not a tap
+    host.addEventListener("pointercancel", () => release(false));
+
+    // ---- Camera ----------------------------------------------------------------------
+    const frameNow = { ...scenes[0].frame };
+    function placeCamera() {
+      const h = host.clientHeight || 1;
+      const t = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+      const feet = clamp(FEET_MIN_PX / h, FEET_FROM_BOTTOM, 0.26);
+      const dist = Math.max(frameNow.height / (1 - feet) / 2 / t, frameNow.width / 2 / (t * camera.aspect));
+      // Look slightly down so the ground reads as ground, and aim at the height that
+      // lands his feet on a fixed line near the bottom, however tall the stage is.
+      const pitch = THREE.MathUtils.degToRad(frameNow.pitch);
+      const n = (1 - 2 * feet) * t;
+      const aimY = (n * dist) / (Math.cos(pitch) - n * Math.sin(pitch));
+      camera.position.set(0, aimY + dist * Math.sin(pitch), dist * Math.cos(pitch));
+      camera.lookAt(0, aimY, 0);
+      camera.updateProjectionMatrix();
+    }
+
+    // ---- Sky: light and page colours follow the clock ------------------------------------
+    const pageVars = { paper: "--paper", paperDeep: "--paper-deep", glow: "--glow", sunCore: "--sun-core", ink: "--ink", inkSoft: "--ink-soft", accent: "--accent" };
+    const keys = sky.map((k) => ({
+      ...k,
+      sunColor: new THREE.Color(k.sun.color),
+      sunPos: new THREE.Vector3().fromArray(k.sun.position),
+      fillColor: new THREE.Color(k.fill.color),
+      groundColor: new THREE.Color(k.fill.ground),
+      pageColors: Object.fromEntries(Object.entries(k.page).map(([name, hex]) => [name, new THREE.Color(hex)])),
+    }));
+    const pageTint = new THREE.Color();
+    let pageDue = 0;
+    function applySky(clock: number) {
+      const i = Math.max(0, keys.findIndex((k, n) => clock < (keys[n + 1]?.at ?? Infinity)));
+      const a = keys[i];
+      const b = keys[i + 1] ?? a;
+      const f = b === a ? 0 : clamp((clock - a.at) / (b.at - a.at), 0, 1);
+      const mix = (x: number, y: number) => x + (y - x) * f;
+      sun.color.lerpColors(a.sunColor, b.sunColor, f);
+      sun.intensity = mix(a.sun.intensity, b.sun.intensity);
+      sun.position.lerpVectors(a.sunPos, b.sunPos, f);
+      fill.color.lerpColors(a.fillColor, b.fillColor, f);
+      fill.groundColor.lerpColors(a.groundColor, b.groundColor, f);
+      fill.intensity = mix(a.fill.intensity, b.fill.intensity);
+      // the page only needs a handful of repaints a second to look continuous
+      if (time < pageDue) return;
+      pageDue = time + 0.08;
+      const style = document.documentElement.style;
+      for (const [name, css] of Object.entries(pageVars)) {
+        style.setProperty(css, `#${pageTint.lerpColors(a.pageColors[name], b.pageColors[name], f).getHexString()}`);
+      }
+      style.setProperty("--sun-x", `${mix(a.disc.x, b.disc.x).toFixed(2)}%`);
+      style.setProperty("--sun-y", `${mix(a.disc.y, b.disc.y).toFixed(2)}%`);
+    }
+
+    // ---- Face: one mouth at a time, and a blink ---------------------------------------
+    const showMouth = (actor: Actor, want: string) => {
+      const shown = actor.mouths[want] ? want : "Neutral";
+      for (const m in actor.mouths) actor.mouths[m].visible = m === shown;
+    };
+    let smileUntil = 0;
+    let nextSmile = rand(6, 12);
+    let nextBlink = rand(2, 4);
+    let blinkUntil = 0;
+    // who has the floor on the call: -1 is him, otherwise a tile
+    const talk = { who: -1, until: 0, open: false, flipAt: 0 };
+    const talking = () => state.onAlso && !!scenes[state.index]?.also?.talks;
+    function face(actor: Actor) {
+      if (reduceMotion) return showMouth(actor, "Neutral");
+      if (time > nextBlink) {
+        blinkUntil = time + 0.12;
+        nextBlink = time + rand(3, 6);
+      }
+      for (const lid of actor.lids) lid.visible = time < blinkUntil;
+
+      const surfing = state.index === SURF;
+      if (time > nextSmile) {
+        // a passing smile now and then; on the board he's grinning more often than not
+        smileUntil = Math.max(smileUntil, time + (surfing ? rand(3, 6) : 2));
+        nextSmile = smileUntil + (surfing ? rand(1.5, 3) : rand(10, 20));
+      }
+      if (state.waving || time < smileUntil) return showMouth(actor, "Smile");
+      if (talking() && talk.who === -1) {
+        if (time > talk.flipAt) {
+          // syllables: 4–8 mouth changes a second
+          talk.open = !talk.open;
+          talk.flipAt = time + rand(0.125, 0.25);
+        }
+        return showMouth(actor, talk.open ? "Open" : "Neutral");
+      }
+      showMouth(actor, "Neutral");
+    }
+
+    function call(actor: Actor, dt: number) {
+      const on = actor === current() && talking();
+      if (on && time > talk.until) {
+        // he talks in bursts, then listens while one of the tiles has the floor
+        const listening = talk.who === -1;
+        talk.who = listening ? Math.floor(rand(0, actor.tiles.length)) : -1;
+        talk.until = time + (listening ? rand(0.5, 1.5) : rand(1.2, 2.8));
+      }
+      actor.tiles.forEach((tile, i) => {
+        // same pop as the props, one after another
+        const rate = on ? timing.propsIn + i * 0.25 : timing.propsOut;
+        tile.t = clamp(tile.t + (on ? 1 : -1) * (dt / rate), 0, 1);
+        const speaking = on && talk.who === i ? 1 : 0;
+        tile.emphasis += (speaking - tile.emphasis) * (1 - Math.exp(-dt * 8));
+        const e = on ? easeOutBack(tile.t) : tile.t * tile.t;
+        const pulse = 1 + tile.emphasis * (0.06 + 0.02 * Math.sin(time * 11));
+        tile.obj.visible = tile.t > 0;
+        tile.obj.scale.copy(tile.scale).multiplyScalar(Math.max(e, 1e-4) * pulse);
+        tile.obj.position.y = tile.y + Math.sin(time * 1.5 + i * 2.1) * 0.012;
+        for (const mat of tile.mats) mat.emissive.setScalar(0.08 * tile.emphasis);
+      });
+    }
+
+    // ---- One frame -------------------------------------------------------------------
+    const presence = scenes.map(() => 0);
+    const v = new THREE.Vector3();
+    const v2 = new THREE.Vector3();
+    const m4 = new THREE.Matrix4();
+    const q0 = new THREE.Quaternion();
+    let sprayDue = 0;
+    let dropsDue = 0;
+
+    // `instant` jumps every easing to its end: the reduced-motion path, and first paint.
+    function step(dt: number, instant = false) {
+      time += dt;
+      if (!reduceMotion) advanceDay(dt);
+      const clock = clockNow();
+      const cfg = scenes[state.index]; // undefined at night
+      const actor = current();
+      const k = (rate: number) => (instant ? 1 : 1 - Math.exp(-dt * rate));
+      const still = reduceMotion ? 0 : 1;
+
+      const wallClock = actors[WORK]?.clock;
+      if (wallClock) {
+        // seen from the front, clockwise is a negative turn about z
+        wallClock.hour.rotation.z = -((clock % 12) / 12) * TAU;
+        wallClock.minute.rotation.z = -(clock % 1) * TAU;
+      }
+      applySky(clock);
+
+      scenes.forEach((_, i) => {
+        const to = i === state.index ? 1 : 0;
+        presence[i] = instant ? to : clamp(presence[i] + Math.sign(to - presence[i]) * dt * 1.4, 0, 1);
+      });
+      const atWork = smooth(presence[WORK]);
+      const atFarm = smooth(presence[FARM]);
+      const atSurf = smooth(presence[SURF]);
+
+      // typing ↔ call, watering ↔ pulling: whatever the clock says he should be doing
+      if (actor?.also && cfg?.also && !reduceMotion && !state.waving) {
+        const on = clock >= cfg.also.from && clock < cfg.also.to;
+        if (on !== state.onAlso) {
+          state.onAlso = on;
+          fadeTo(actor, baseAction(actor), timing.crossfade);
+        }
+      }
+
+      items.forEach((list, i) => {
+        const coming = i === state.index;
+        for (const item of list) {
+          if (instant) item.t = coming ? 1 : 0;
+          else if (!coming) item.t = Math.max(0, item.t - dt / timing.propsOut);
+          else if (item.wait > 0) item.wait -= dt;
+          else item.t = Math.min(1, item.t + dt / timing.propsIn);
+          // in: pop past full size and settle. out: hesitate, then drop away.
+          const e = coming ? easeOutBack(item.t) : 1 - Math.pow(1 - item.t, 2);
+          item.obj.visible = item.t > 0;
+          item.obj.scale.copy(item.scale).multiplyScalar(Math.max(e, 1e-4));
+          item.obj.position.y = item.y - (1 - Math.min(e, 1)) * item.sink;
+        }
+      });
+
+      if (instant) {
+        spin.yaw = cfg?.homeYaw ?? spin.yaw;
+        spin.velocity = 0;
+      } else if (!spin.dragging) {
+        // keep a little momentum, then settle back to this scene's resting angle
+        spin.yaw += spin.velocity;
+        spin.velocity *= Math.exp(-dt * 5);
+        if (cfg) {
+          const home = Math.round((spin.yaw - cfg.homeYaw) / TAU) * TAU + cfg.homeYaw;
+          spin.yaw += (home - spin.yaw) * k(2.2);
+        }
+      }
+
+      // Ride the swell: sample it under the nose, tail and rails of the board.
+      const cy = Math.cos(spin.yaw);
+      const sy = Math.sin(spin.yaw);
+      const at = (along: number, across: number) =>
+        swell(along * cy + across * sy, -along * sy + across * cy, time) * atSurf * still;
+
+      actors.forEach((a, i) => {
+        if (!a) return;
+        // on stage while anything of his is: arriving, here, or still shrinking away
+        a.root.visible = items[i].some((item) => item.t > 0);
+        if (!a.root.visible) return;
+        a.mixer.update(instant ? 0 : dt);
+        a.root.rotation.y = spin.yaw;
+        if (i === SURF) {
+          a.root.position.y = ((at(0.8, 0) + at(-0.8, 0)) / 2) * 0.9;
+          a.root.rotation.z = Math.atan2(at(0.8, 0) - at(-0.8, 0), 1.6) * 0.9;
+          a.root.rotation.x = Math.atan2(at(0, 0.3) - at(0, -0.3), 0.6) * 0.5 + Math.sin(time * 0.9) * 0.035 * atSurf * still;
+        }
+        if (a.glow) a.glow.intensity = atWork * (0.35 + still * 0.06 * Math.sin(time * 9) * Math.sin(time * 2.3));
+        if (a.tiles.length) call(a, dt);
+        if (a === actor) face(a);
+      });
+
+      // -- ambient life --
+      if (atWork > 0) {
+        moteSeeds.forEach((s, i) => {
+          const a = time * s.speed + s.phase;
+          v.set(s.x + Math.sin(a) * 0.12, s.y + Math.sin(a * 0.7) * 0.1, s.z + Math.cos(a * 1.3) * 0.12);
+          const twinkle = 0.006 + 0.004 * Math.sin(a * 3);
+          motes.setMatrixAt(i, m4.compose(v, q0, v2.setScalar(twinkle)));
+        });
+        motes.instanceMatrix.needsUpdate = true;
+      }
+
+      const farmer = actors[FARM];
+      if (atFarm > 0) {
+        farmer?.sprouts.forEach((s, i) => {
+          s.obj.rotation.z = s.rest.z + Math.sin(time * 1.7 + i * 1.3) * 0.11 * still;
+          s.obj.rotation.x = s.rest.x + Math.sin(time * 1.3 + i * 2.1) * 0.06 * still;
+        });
+        butterflies.forEach((b) => {
+          const a = time * 0.6 + b.phase;
+          v.set(
+            -0.55 + Math.sin(a) * 0.75,
+            0.75 + Math.sin(a * 2.3) * 0.2 + Math.sin(time * 9 + b.phase) * 0.02,
+            0.55 + Math.sin(a * 1.6 + 1) * 0.45,
+          );
+          if (dt > 0) b.body.rotation.y = Math.atan2(v.x - b.last.x, v.z - b.last.z);
+          b.last.copy(v);
+          b.body.position.copy(v);
+          const flap = 0.15 + Math.abs(Math.sin(time * 13 + b.phase)) * 1.1 * still + (1 - still) * 0.5;
+          b.right.rotation.z = flap;
+          b.left.rotation.z = -flap;
+        });
+      }
+      if (!reduceMotion) {
+        dropsDue -= dt;
+        if (farmer?.spout && farmer.can && presence[FARM] === 1 && dropsDue <= 0) {
+          farmer.spout.getWorldPosition(v);
+          farmer.can.getWorldPosition(v2);
+          // pouring whenever the spout tip dips below the body of the can
+          if ((v2.y - v.y) / (v.distanceTo(v2) || 1) > 0.05) {
+            dropsDue = 0.05;
+            v2.subVectors(v, v2).setY(0).normalize().multiplyScalar(0.35);
+            v2.x += rand(-0.08, 0.08);
+            v2.z += rand(-0.08, 0.08);
+            drops.spawn(v, v2, 1.2);
+          }
+        }
+        drops.update(dt, 5, 0.06);
+
+        sprayDue -= dt;
+        const surfer = actors[SURF];
+        if (surfer && presence[SURF] === 1 && sprayDue <= 0) {
+          sprayDue = rand(0.03, 0.09);
+          // off the nose and along the rail facing the swell
+          surfer.root.localToWorld(v.set(rand(0.55, 1.0), 0.06, rand(-0.16, 0.16)));
+          v2.set(rand(-1.3, -0.5), rand(0.5, 1.3), rand(-0.5, 0.5)).applyQuaternion(surfer.root.quaternion);
+          spray.spawn(v, v2, rand(0.35, 0.6));
+        }
+        spray.update(dt, 4.5, -0.05);
+
+        if (time >= puffDue) {
+          puffDue = Infinity;
+          for (let i = 0; i < 22; i++) {
+            const a = rand(0, TAU);
+            v2.set(Math.cos(a) * rand(0.5, 1.4), rand(-0.3, 1.2), Math.sin(a) * rand(0.5, 1.4));
+            puff.spawn(puffAt, v2, rand(0.4, 0.7));
+          }
+        }
+        puff.update(dt, 1.5, -1);
+      }
+      if (atSurf > 0) updateWater(reduceMotion ? 0 : time);
+
+      // on the water his shadow belongs to the waves, not to a flat floor
+      shadowCatcher.material.opacity = 0.22 * (1 - atSurf);
+      if (cfg) {
+        frameNow.width += (cfg.frame.width - frameNow.width) * k(2.5);
+        frameNow.height += (cfg.frame.height - frameNow.height) * k(2.5);
+        frameNow.pitch += (cfg.frame.pitch - frameNow.pitch) * k(2.5);
+      }
+      placeCamera();
+
+      renderer.render(scene, camera);
+    }
+
+    // ---- Run only while someone can see it, and hasn't paused it ---------------------------
+    let raf = 0;
+    let onScreen = true;
+    let lastTick = 0;
+    function tick(now: number) {
+      raf = 0;
+      // capped, so coming back from a hidden tab or a pause doesn't fast-forward the day
+      step(Math.min((now - lastTick) / 1000, 0.05));
+      lastTick = now;
+      schedule();
+    }
+    function schedule() {
+      if (raf || reduceMotion || state.paused || !onScreen || document.hidden) return;
+      raf = requestAnimationFrame(tick);
+    }
+    document.addEventListener("visibilitychange", schedule);
+    new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      schedule();
+    }).observe(host);
+
+    function resize() {
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      // setSize clears the canvas; redraw now rather than flash until the next frame
+      step(0, reduceMotion);
+    }
+    resize();
+    step(0, true);
+    // first paint has everything in place; rewind so the day opens with him and his desk popping in
+    if (!reduceMotion) {
+      items[0].forEach((item) => (item.t = 0));
+      queueItems(0, 0.2);
+      step(0);
+    }
+    new ResizeObserver(resize).observe(host);
+
+    announce();
+    stage.classList.add("is-ready");
+    document.documentElement.dataset.character = "ready";
+    schedule();
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-character-stage]").forEach((stage) => {
+    mount(stage).catch((err) => {
+      console.warn("Character unavailable:", err);
+      document.documentElement.dataset.character = "failed";
+    });
+  });
+</script>
