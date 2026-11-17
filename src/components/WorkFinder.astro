@@ -1,0 +1,382 @@
+---
+// "What are you looking for?" — a visitor describes a problem and gets a short
+// written reply about similar things Anando has built. /api/work writes it from
+// a server-only work log; nothing from that log is ever shipped to the browser,
+// so there is no list here to browse. Needs JS, so it stays hidden without it.
+//
+// Lives in the page's left column on desktop, where the reply opens as a card
+// above the box; on phones it sits below the stage and simply grows.
+---
+
+<section class="finder" data-finder hidden>
+  <form class="finder-form" data-finder-form role="search">
+    <label class="finder-label" for="finder-q">What are you looking for?</label>
+    <div class="finder-row">
+      <input
+        id="finder-q"
+        class="finder-input"
+        name="q"
+        type="search"
+        maxlength="300"
+        autocomplete="off"
+        enterkeyhint="search"
+        placeholder="an agent that reads invoices"
+      />
+      <button class="finder-go" type="submit" aria-label="Ask">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+    </div>
+  </form>
+
+  <div class="finder-panel" data-finder-panel hidden>
+    <div class="finder-bar">
+      <p class="finder-status" data-finder-status aria-live="polite"></p>
+      <button class="finder-close" type="button" data-finder-close>Close</button>
+    </div>
+    <div class="finder-reply" data-finder-reply tabindex="-1"></div>
+    <p class="finder-foot" data-finder-foot hidden>
+      Answered by my agent, from my work log.
+      <a href="mailto:me@anandoghose.com?subject=Your%20work">Email me about this</a>
+    </p>
+  </div>
+</section>
+
+<style is:global>
+  /* Global on purpose: the result cards are built in script, so scoped rules would miss them. */
+  .finder {
+    max-width: 29rem;
+    margin-top: 1.75rem;
+  }
+
+  .finder-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .finder-row {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+  }
+
+  .finder-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.8rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 30%, transparent);
+    border-radius: 0.6rem;
+    background: color-mix(in srgb, var(--paper) 70%, #fff);
+    color: var(--ink);
+    font: inherit;
+    font-size: 1rem;
+  }
+  .finder-input::placeholder {
+    color: var(--ink-soft);
+    opacity: 0.85;
+  }
+  .finder-input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .finder-go {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+  }
+  .finder-go:hover {
+    background: var(--accent);
+  }
+
+  .finder-input:focus-visible,
+  .finder-go:focus-visible,
+  .finder-close:focus-visible,
+  .finder a:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .finder-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.9rem;
+  }
+
+  .finder-status {
+    font-size: 0.98rem;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* "thinking" with dots that arrive one after another, over and over */
+  .finder-status.is-thinking::after {
+    content: "";
+    display: inline-block;
+    width: 1.2em;
+    text-align: left;
+    animation: finder-dots 1.4s steps(1, end) infinite;
+  }
+
+  @keyframes finder-dots {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    75% { content: "..."; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .finder-status.is-thinking::after {
+      content: "...";
+      animation: none;
+    }
+  }
+
+  .finder-close {
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 0.25em;
+    cursor: pointer;
+  }
+  .finder-close:hover {
+    color: var(--accent);
+  }
+
+  .finder-reply {
+    margin-top: 0.6rem;
+    /* focused from script so reading starts here; it isn't a control, so no ring */
+    outline: none;
+  }
+
+  /* The reply is the point of the panel: set it as text to be read. */
+  .finder-reply p {
+    max-width: 34em;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .finder-reply p + p {
+    margin-top: 0.8em;
+  }
+
+  .finder-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.4rem;
+    margin-top: 0.8rem;
+    list-style: none;
+  }
+  .finder-tags li {
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 28%, transparent);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+
+  .finder-foot {
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+  .finder a {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 0.25em;
+  }
+  .finder a:hover {
+    color: var(--accent);
+  }
+
+  /* Desktop: the reply is a card that opens upward from the box, over the copy, as
+     tall as what it says. Nothing in the page moves, and the stage carries on beside it. */
+  @media (min-width: 821px) {
+    .finder {
+      position: relative;
+    }
+    .finder-panel {
+      position: absolute;
+      left: -1.25rem;
+      right: -1.25rem;
+      bottom: calc(100% + 0.6rem);
+      max-height: min(70dvh, 34rem);
+      padding: 0.2rem 1.25rem 1rem;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border-radius: 0.9rem;
+      background: var(--paper);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent),
+        0 1rem 2.5rem -1rem color-mix(in srgb, var(--ink) 45%, transparent);
+    }
+  }
+
+  /* Phones: below the stage, full width, in the flow of the page. */
+  @media (max-width: 820px) {
+    .finder {
+      max-width: none;
+      margin: 0;
+      padding: 1.25rem 1.25rem 2rem;
+    }
+  }
+</style>
+
+<script>
+  const HINTS = [
+    "an agent that reads invoices",
+    "reports that build themselves",
+    "a Teams bot for finance questions",
+    "getting a team started with AI",
+  ];
+  const MAX_QUERY = 300;
+  const TIMEOUT_MS = 15_000;
+
+  const finder = document.querySelector<HTMLElement>("[data-finder]");
+  if (finder) {
+    const form = finder.querySelector<HTMLFormElement>("[data-finder-form]")!;
+    const input = finder.querySelector<HTMLInputElement>(".finder-input")!;
+    const panel = finder.querySelector<HTMLElement>("[data-finder-panel]")!;
+    const status = finder.querySelector<HTMLElement>("[data-finder-status]")!;
+    const reply = finder.querySelector<HTMLElement>("[data-finder-reply]")!;
+    const foot = finder.querySelector<HTMLElement>("[data-finder-foot]")!;
+    const close = finder.querySelector<HTMLButtonElement>("[data-finder-close]")!;
+
+    // On phones the box would push him below the fold, so it goes after the stage there.
+    const page = finder.closest<HTMLElement>(".page");
+    const home = finder.parentElement!;
+    const phone = window.matchMedia("(max-width: 820px)");
+    const place = () => (phone.matches && page ? page.append(finder) : home.append(finder));
+    phone.addEventListener("change", place);
+    place();
+    // Down there it would also take a share of the first screen from the stage; tell
+    // the page how tall the copy is so the stage can keep everything the copy leaves.
+    new ResizeObserver(() => page?.style.setProperty("--intro-height", `${home.offsetHeight}px`)).observe(home);
+    finder.hidden = false;
+
+    // Whatever the agent wrote goes in as text, never as markup.
+    const el = (tag: string, text: string) => {
+      const node = document.createElement(tag);
+      node.textContent = text;
+      return node;
+    };
+
+    function shut() {
+      panel.hidden = true;
+      reply.replaceChildren();
+      status.textContent = "";
+      status.classList.remove("is-thinking");
+      input.value = "";
+      input.focus();
+    }
+
+    function show(nodes: Node[], answered: boolean) {
+      status.textContent = "";
+      status.classList.remove("is-thinking");
+      reply.replaceChildren(...nodes);
+      foot.hidden = !answered;
+      // into the reply, so a keyboard or screen-reader user lands on what just arrived
+      reply.focus({ preventScroll: true });
+      if (phone.matches) finder!.scrollIntoView({ behavior: "smooth", block: "start" });
+      else panel.scrollTop = 0;
+    }
+
+    // The agent's reply, or null if it can't be had for any reason: no key, rate
+    // limit, outage, timeout.
+    async function ask(q: string): Promise<{ note: string; areas: string[] } | null> {
+      const abort = new AbortController();
+      const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+      try {
+        const response = await fetch("/api/work", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-work-finder": "1" },
+          body: JSON.stringify({ q }),
+          signal: abort.signal,
+        });
+        const answer = await response.json();
+        if (!response.ok || answer.fallback || typeof answer.note !== "string" || !answer.note.trim()) return null;
+        const areas = Array.isArray(answer.areas) ? answer.areas.filter((a: unknown) => typeof a === "string") : [];
+        return { note: answer.note, areas: areas.slice(0, 3) };
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    let busy = false;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = input.value.trim().slice(0, MAX_QUERY);
+      if (busy || q.length < 3) return;
+      busy = true;
+      reply.replaceChildren();
+      foot.hidden = true;
+      status.textContent = "thinking";
+      status.classList.add("is-thinking");
+      panel.hidden = false;
+      const answer = await ask(q);
+      busy = false;
+      status.classList.remove("is-thinking");
+      if (panel.hidden) return; // closed while we were looking: leave it closed
+
+      if (!answer) {
+        const line = el("p", "My agent is not answering right now. ");
+        const mail = el("a", "Email me and I will reply myself.") as HTMLAnchorElement;
+        mail.href = "mailto:me@anandoghose.com?subject=Your%20work";
+        line.append(mail);
+        return show([line], false);
+      }
+      // blank lines in the reply are paragraph breaks
+      const nodes: Node[] = answer.note
+        .split(/\n\s*\n/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => el("p", part));
+      if (answer.areas.length) {
+        const tags = document.createElement("ul");
+        tags.className = "finder-tags";
+        tags.append(...answer.areas.map((area) => el("li", area)));
+        nodes.push(tags);
+      }
+      show(nodes, true);
+    });
+
+    close.addEventListener("click", shut);
+    finder.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !panel.hidden) shut();
+    });
+
+    // Example requests, cycling in the empty box.
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let hint = 0;
+      setInterval(() => {
+        if (document.activeElement === input || input.value) return;
+        input.placeholder = HINTS[(hint = (hint + 1) % HINTS.length)];
+      }, 3500);
+    }
+  }
+</script>

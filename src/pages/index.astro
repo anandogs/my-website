@@ -2,6 +2,7 @@
 // Homepage: who Anando is on the left, a day in his life in 3D on the right.
 // The character sets <html data-scene> and repaints the palette as his clock runs.
 import Character3D from "../components/Character3D.astro";
+import WorkFinder from "../components/WorkFinder.astro";
 import { copy, tagline } from "../data/copy";
 import { scenes } from "../data/scenes";
 
@@ -154,6 +155,8 @@ const links = [
             ))
           }
         </ul>
+
+        <WorkFinder />
       </main>
 
       <div class="stage">
@@ -452,7 +455,7 @@ const links = [
           height: auto;
           /* takes what the copy leaves of the first screen, so he stays above the
              fold on a tall phone; only short screens have to scroll to his feet */
-          min-height: max(17rem, 34dvh);
+          min-height: max(17rem, 34dvh, 100dvh - var(--intro-height, 100dvh));
         }
 
         :global(:root[data-character="failed"]) .intro {
