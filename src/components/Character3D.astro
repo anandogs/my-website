@@ -209,7 +209,7 @@ import { scenes } from "../data/scenes";
     const SURF = sceneIndex("surf");
 
     // `seg` indexes `segments`; `index` is the scene on stage (-1 at night).
-    const state = { seg: 0, index: 0, dayClock: 0, paused: false, waving: false, onAlso: false };
+    const state = { seg: 0, index: 0, dayClock: 0, paused: false, waving: false, also: -1 };
     let time = 0;
 
     // ---- Things that pop in and out with a scene -------------------------------
@@ -246,28 +246,57 @@ import { scenes } from "../data/scenes";
       emphasis: number;
       mats: any[];
     }
+    // The little robot on his desk. Every part is optional; `rest` is how the model left it.
+    interface Part {
+      obj: any;
+      rot: any;
+      quat: any;
+      scale: any;
+    }
+    interface Agent {
+      head: Part | null;
+      eyes: Part[];
+      arms: Part[];
+      antenna: Part | null;
+      glow: any[];
+      light: any;
+      listen: any;
+      chatting: boolean;
+      /** 0 = busy at its own keyboard, 1 = turned to him */
+      turn: number;
+      yaw: number;
+    }
     interface Actor {
       root: any;
       mixer: any;
       loop: any;
       wave: any;
-      also: any;
+      also: any[];
       active: any;
       hips: any;
+      headFront: any;
+      /** the bones that share the turn toward the viewer; `pose` is each one's rotation as animated, before that turn */
+      lookChain: { bone: any; share: number; nod: number; pose: any }[];
+      head: any;
       lids: any[];
       mouths: Record<string, any>;
       tiles: Tile[];
       sprouts: { obj: any; rest: any }[];
+      leds: any[][];
+      drips: { obj: any; due: number }[];
       spout: any;
       can: any;
       glow: any;
       clock: { hour: any; minute: any } | null;
+      agent: Agent | null;
+      /** the cat on his desk: `active` is whichever of her two clips is playing */
+      pet: { rest: any; spell: any; active: any; head: any; pose: any; mode: "rest" | "spell" | "look"; until: number; done: boolean[] } | null;
     }
     const actors: (Actor | null)[] = scenes.map(() => null);
     const status: ("pending" | "ready" | "failed")[] = scenes.map(() => "pending");
     const current = () => (state.index >= 0 ? actors[state.index] : null);
-    // what he goes back to after a wave: the scene loop, or its second activity if that's on
-    const baseAction = (actor: Actor) => (state.onAlso && actor.also && actor === current() ? actor.also : actor.loop);
+    // what he goes back to after a wave: the scene loop, or the side activity that's on
+    const baseAction = (actor: Actor) => (actor === current() && actor.also[state.also]) || actor.loop;
     function fadeTo(actor: Actor, next: any, seconds: number) {
       if (next === actor.active) return;
       next.reset().play();
@@ -284,18 +313,21 @@ import { scenes } from "../data/scenes";
         // a shared model also carries the other scenes' props: never show those here
         if (o.name.startsWith("Prop_") && !o.name.startsWith(cfg.props)) o.visible = false;
         if (!o.isMesh) return;
-        o.castShadow = true;
+        // a clear cover (the junction-box lid) must not put what's under it in shadow
+        o.castShadow = !o.material.transparent;
         o.receiveShadow = o.name.startsWith("Prop_");
         o.frustumCulled = false; // skinned bounds are unreliable
         // props are faceted low-poly; his body and face stay smooth
-        o.material.flatShading = o.name.startsWith("Prop_");
+        // (textured props, like the cat, are modelled smooth too)
+        o.material.flatShading = o.name.startsWith("Prop_") && !o.material.map;
         o.material.metalness = 0;
         o.material.roughness = 1;
         o.material.needsUpdate = true;
       });
 
       const tiles: Tile[] = [];
-      const tileName = cfg.also?.tiles ? new RegExp(`^${cfg.also.tiles}\\d+$`) : null;
+      const tilePrefix = cfg.also?.find((a) => a.tiles)?.tiles;
+      const tileName = tilePrefix ? new RegExp(`^${tilePrefix}\\d+$`) : null;
       const propsRoot = root.getObjectByName(cfg.props);
       const rig = root.getObjectByName("AnandoRig");
       if (rig) addItem(index, rig, 0.3);
@@ -313,7 +345,7 @@ import { scenes } from "../data/scenes";
         }
         if (o === propsRoot || !o.name.startsWith(cfg.props)) return;
         // tiles come and go with the call, not with the scene
-        if (cfg.also?.tiles && o.name.startsWith(cfg.also.tiles)) return;
+        if (tilePrefix && o.name.startsWith(tilePrefix)) return;
         // nested prop parts ride along with their nearest prop ancestor
         if (o.parent !== propsRoot && o.parent.name.startsWith(cfg.props)) return;
         // only props standing on the ground sink into it; the can lives in his hand
@@ -332,8 +364,8 @@ import { scenes } from "../data/scenes";
         wave.setLoop(THREE.LoopOnce, 1);
         wave.clampWhenFinished = true; // hold the last (rest) pose while the loop fades back in
       }
-      // a second activity that needs tiles (the call) only runs if they exist
-      const also = cfg.also && (!cfg.also.tiles || tiles.length) ? clipAction(cfg.also.clip) : null;
+      // a side activity that needs tiles (the call) only runs if they exist
+      const also = (cfg.also ?? []).map((a) => (!a.tiles || tiles.length ? clipAction(a.clip) : null));
 
       const lids = ["Blink_L", "Blink_R"].map((n) => root.getObjectByName(n)).filter(Boolean);
       lids.forEach((lid: any) => (lid.visible = false));
@@ -346,10 +378,74 @@ import { scenes } from "../data/scenes";
         if (/^Prop_Farm_Sprout\d+$/.test(o.name)) sprouts.push({ obj: o, rest: o.rotation.clone() });
       });
 
+      // the self-watering kit: status LEDs on the controller, emitters along the drip line
+      const leds: any[][] = [];
+      const drips: Actor["drips"] = [];
+      root.traverse((o: any) => {
+        if (/^Prop_Farm_Drip\d+$/.test(o.name)) drips.push({ obj: o, due: rand(0, 2.5) });
+        if (!/^Prop_Farm_Led\d+$/.test(o.name)) return;
+        const mats: any[] = [];
+        o.traverse((part: any) => {
+          if (!part.isMesh) return;
+          // own copy, so each LED blinks to its own rhythm
+          part.material = part.material.clone();
+          if (part.material.emissive.getHex() === 0) part.material.emissive.copy(part.material.color);
+          mats.push(part.material);
+        });
+        leds[Number(o.name.match(/\d+$/)[0])] = mats;
+      });
+
+      // the agent buddy: found by name, so a model without one simply has no agent
+      const agentPart = (name: string): Part | null => {
+        const obj = root.getObjectByName(`Prop_Laptop_Agent${name}`);
+        return obj ? { obj, rot: obj.rotation.clone(), quat: obj.quaternion.clone(), scale: obj.scale.clone() } : null;
+      };
+      const agentParts = {
+        head: agentPart("Head"),
+        eyes: [agentPart("Eye0"), agentPart("Eye1")].filter(Boolean) as Part[],
+        arms: [agentPart("Arm0"), agentPart("Arm1")].filter(Boolean) as Part[],
+        antenna: agentPart("Antenna"),
+      };
+      let agent: Agent | null = null;
+      if (agentParts.head || agentParts.eyes.length || agentParts.arms.length) {
+        // its terminal screen glows; own material copies so it can flicker
+        const glow: any[] = [];
+        for (const lit of [agentPart("Screen")]) {
+          lit?.obj.traverse((part: any) => {
+            if (!part.isMesh) return;
+            part.material = part.material.clone();
+            part.material.userData.rest = part.material.emissiveIntensity;
+            glow.push(part.material);
+          });
+        }
+        // the robot's side of the chat, timed to play alongside his clip from the same instant
+        const listen = clipAction("Agent_Listen");
+        if (listen) {
+          listen.setLoop(THREE.LoopOnce, 1);
+          listen.clampWhenFinished = true;
+        }
+        // its own screen faces away from the camera; this is that screen's light on its face
+        const lightAt = root.getObjectByName("Prop_Laptop_AgentGlowPoint");
+        const light = lightAt ? new THREE.PointLight(0xfff0dc, 0, 0.7, 0.5) : null;
+        if (light) lightAt.add(light);
+        agent = { ...agentParts, glow, light, listen, chatting: false, turn: 0, yaw: 0 };
+      }
+
       // the screen on his face
       const glowPoint = root.getObjectByName("Prop_Laptop_GlowPoint");
       const glow = glowPoint ? new THREE.PointLight(0x9cc4ff, 0, 1.6, 0.5) : null;
       if (glow) glowPoint.add(glow);
+
+      // The cat: two node clips on this same mixer. Each keys the scale of both her
+      // meshes, so whichever clip is playing also decides which cat is showing.
+      let pet: Actor["pet"] = null;
+      const petRest = cfg.pet && clipAction(cfg.pet.rest);
+      const petSpell = cfg.pet && clipAction(cfg.pet.spell);
+      if (cfg.pet && petRest && petSpell) {
+        const head = root.getObjectByName(cfg.pet.head);
+        petRest.play();
+        pet = { rest: petRest, spell: petSpell, active: petRest, head, pose: head?.quaternion.clone(), mode: "rest", until: 0, done: [] };
+      }
 
       let clock: Actor["clock"] = null;
       if (index === WORK) {
@@ -372,14 +468,25 @@ import { scenes } from "../data/scenes";
         also,
         active: loop,
         hips: root.getObjectByName("Hips"),
+        headFront: root.getObjectByName("headfront"),
+        lookChain: cfg.turn.bones
+          // looking up or down and the cock of the head are for the neck and head alone
+          .map(([name, share]) => ({ bone: root.getObjectByName(name), share, nod: name === "neck" || name === "Head" ? 0.5 : 0 }))
+          .filter((l) => l.bone)
+          .map((l) => ({ ...l, pose: l.bone.quaternion.clone() })),
+        head: root.getObjectByName("Head"),
         lids,
         mouths,
         tiles,
         sprouts,
+        leds,
+        drips,
         spout: root.getObjectByName("Spout"),
         can: root.getObjectByName("Prop_Farm_Can"),
         glow,
         clock,
+        agent,
+        pet,
       };
       mixer.addEventListener("finished", (e: any) => {
         if (e.action !== actor.active) return;
@@ -606,6 +713,8 @@ import { scenes } from "../data/scenes";
     }
     const spray = makeParticles(36, 0xffffff, 0.03);
     const drops = makeParticles(28, 0x69bfe6, 0.022);
+    const drips = makeParticles(16, 0x69bfe6, 0.011);
+    drips.update(0, 0, 0);
     spray.update(0, 0, 0);
     drops.update(0, 0, 0);
 
@@ -649,7 +758,7 @@ import { scenes } from "../data/scenes";
       const leaving = current();
       state.index = index;
       state.waving = false;
-      state.onAlso = false;
+      state.also = -1;
       if (leaving) {
         // he goes off to get changed in a puff …
         (leaving.hips ?? leaving.root).getWorldPosition(puffAt);
@@ -660,6 +769,10 @@ import { scenes } from "../data/scenes";
         actor.mixer.stopAllAction();
         actor.active = actor.loop;
         actor.loop.reset().play();
+        if (actor.pet) {
+          Object.assign(actor.pet, { active: actor.pet.rest, mode: "rest", done: [] });
+          actor.pet.rest.reset().play();
+        }
         queueItems(index, leaving ? timing.propsInDelay : 0.15);
         if (!leaving) {
           // … or, in the morning, simply turns up in one
@@ -699,7 +812,108 @@ import { scenes } from "../data/scenes";
       const actor = current();
       if (!actor?.wave || state.waving || reduceMotion || state.paused) return;
       state.waving = true;
-      fadeTo(actor, actor.wave, 0.25);
+      // The clip swaps his hand for a posed one 0.17 s in, by scale. A longer blend
+      // from the loop would still be under way then and show both hands part-size.
+      fadeTo(actor, actor.wave, 0.15);
+      // a blink as he notices you
+      blinkUntil = time + 0.13;
+      nextBlink = time + rand(2.5, 4.5);
+    }
+
+    // ---- The cat ---------------------------------------------------------------------------
+    // Mostly asleep; a grooming spell when the clock says so (timed for while he is
+    // turned to the agent), a whole number of loops long. Her two poses are two meshes
+    // swapped by scale, so the change is a quick shrink-and-pop, like the props.
+    function petTo(actor: Actor, action: any) {
+      const pet = actor.pet!;
+      if (action === pet.active) return;
+      action.reset().play();
+      action.timeScale = 1;
+      pet.active.crossFadeTo(action, 0.2, false);
+      pet.active = action;
+    }
+    function petLife(actor: Actor, clock: number) {
+      const pet = actor.pet!;
+      const cfg = scenes[state.index].pet!;
+      if (pet.mode === "look") {
+        if (!state.waving && noticed.w < 0.05) {
+          pet.mode = "rest";
+          petTo(actor, pet.rest);
+        }
+      } else if (pet.mode === "spell") {
+        if (time >= pet.until) {
+          pet.mode = "rest";
+          petTo(actor, pet.rest);
+        }
+      } else {
+        const due = cfg.spells.findIndex((s, i) => !pet.done[i] && clock >= s.at && clock < s.at + 0.2);
+        if (due >= 0) {
+          pet.done[due] = true;
+          pet.mode = "spell";
+          pet.until = time + cfg.spells[due].loops * pet.spell.getClip().duration - 0.2;
+          petTo(actor, pet.spell);
+        }
+      }
+      // on a tap she looks out at the visitor along with him (her head faces +Z at rest)
+      const w = pet.mode === "look" ? clamp(noticed.w, 0, 1) : 0;
+      if (!w || !pet.head) return;
+      pet.head.parent.updateWorldMatrix(true, false);
+      pet.head.parent.getWorldQuaternion(parentQ);
+      pet.head.getWorldPosition(headAt);
+      facing.set(0, 0, 1).applyQuaternion(pet.head.getWorldQuaternion(worldTurn));
+      toLens.copy(camera.position).sub(headAt);
+      const yaw = clamp(wrapPi(Math.atan2(toLens.x, toLens.z) - Math.atan2(facing.x, facing.z)), -1.1, 1.1) * w;
+      worldTurn.setFromAxisAngle(yAxis, yaw);
+      pet.head.quaternion.premultiply(partTurn.copy(parentQ).invert().multiply(worldTurn).multiply(parentQ));
+    }
+
+    // ---- Noticing the visitor ---------------------------------------------------------------
+    // A tap makes him look out of the screen: while the wave plays he turns to the real
+    // camera, wherever the view has been spun to. Only he turns, never the set: the turn
+    // is shared up the scene's `turn.bones` so the face ends square to the lens, and if
+    // the lens is further round than a person could twist, he stops short of it.
+    // `w` is how far into that he is; a spring, so it snaps in with a little overshoot.
+    const noticed = { w: 0, speed: 0, side: 1 };
+    const yAxis = new THREE.Vector3(0, 1, 0);
+    const zAxis = new THREE.Vector3(0, 0, 1);
+    const headAt = new THREE.Vector3();
+    const facing = new THREE.Vector3();
+    const toLens = new THREE.Vector3();
+    const parentQ = new THREE.Quaternion();
+    const worldTurn = new THREE.Quaternion();
+    const partTurn = new THREE.Quaternion();
+    const wrapPi = (a: number) => a - Math.round(a / TAU) * TAU;
+    function notice(actor: Actor, dt: number) {
+      // let go a little before the wave ends, so he is back on his task as it finishes
+      const on = state.waving && actor.wave && actor.wave.time < actor.wave.getClip().duration - 0.45 ? 1 : 0;
+      noticed.speed += ((on - noticed.w) * 260 - noticed.speed * 22) * dt;
+      noticed.w += noticed.speed * dt;
+      if (!on && Math.abs(noticed.w) < 0.002 && Math.abs(noticed.speed) < 0.02) noticed.w = noticed.speed = 0;
+      const w = noticed.w;
+      if (w === 0 || !actor.head || !actor.headFront) return;
+
+      // where his face points as animated, and where the lens is from his head
+      actor.root.updateMatrixWorld(true);
+      actor.head.getWorldPosition(headAt);
+      actor.headFront.getWorldPosition(facing).sub(headAt).normalize();
+      toLens.copy(camera.position).sub(headAt).normalize();
+      let yaw = wrapPi(Math.atan2(toLens.x, toLens.z) - Math.atan2(facing.x, facing.z));
+      // with the lens right behind him, don't flip-flop over which way round to turn
+      if (Math.abs(yaw) > 2.6) yaw = Math.abs(yaw) * noticed.side;
+      else noticed.side = Math.sign(yaw) || 1;
+      const limit = scenes[state.index].turn.limit;
+      const neckYaw = clamp(yaw, -limit, limit) * w;
+      const neckPitch = clamp(Math.asin(clamp(facing.y, -1, 1)) - Math.asin(clamp(toLens.y, -1, 1)), -0.5, 0.5) * w;
+      for (const { bone, share, nod } of actor.lookChain) {
+        bone.parent.updateWorldMatrix(true, false);
+        bone.parent.getWorldQuaternion(parentQ);
+        worldTurn.setFromAxisAngle(yAxis, neckYaw * share);
+        worldTurn.multiply(partTurn.setFromAxisAngle(xAxis, neckPitch * nod));
+        // a slight cock of the head, the way you look at someone you've just spotted
+        worldTurn.multiply(partTurn.setFromAxisAngle(zAxis, 0.07 * w * nod * noticed.side));
+        // express the world-space turn in the bone's parent space
+        bone.quaternion.premultiply(partTurn.copy(parentQ).invert().multiply(worldTurn).multiply(parentQ));
+      }
     }
 
     pauseButton?.addEventListener("click", () => {
@@ -750,7 +964,8 @@ import { scenes } from "../data/scenes";
       const h = host.clientHeight || 1;
       const t = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
       const feet = clamp(FEET_MIN_PX / h, FEET_FROM_BOTTOM, 0.26);
-      const dist = Math.max(frameNow.height / (1 - feet) / 2 / t, frameNow.width / 2 / (t * camera.aspect));
+      // a small push-in while he is looking back at the visitor
+      const dist = Math.max(frameNow.height / (1 - feet) / 2 / t, frameNow.width / 2 / (t * camera.aspect)) * (1 - 0.025 * noticed.w);
       // Look slightly down so the ground reads as ground, and aim at the height that
       // lands his feet on a fixed line near the bottom, however tall the stage is.
       const pitch = THREE.MathUtils.degToRad(frameNow.pitch);
@@ -805,9 +1020,17 @@ import { scenes } from "../data/scenes";
     let nextSmile = rand(6, 12);
     let nextBlink = rand(2, 4);
     let blinkUntil = 0;
-    // who has the floor on the call: -1 is him, otherwise a tile
+    // who has the floor in a conversation: -1 is him, otherwise a call tile (or the buddy)
     const talk = { who: -1, until: 0, open: false, flipAt: 0 };
-    const talking = () => state.onAlso && !!scenes[state.index]?.also?.talks;
+    const activity = () => scenes[state.index]?.also?.[state.also];
+    const talking = () => !!activity()?.talks;
+    // he talks in bursts, then listens while one of the others has the floor
+    function converse(others: number) {
+      if (time < talk.until) return;
+      const listening = talk.who === -1;
+      talk.who = listening ? Math.floor(rand(0, Math.max(1, others))) : -1;
+      talk.until = time + (listening ? rand(0.5, 1.5) : rand(1.2, 2.8));
+    }
     function face(actor: Actor) {
       if (reduceMotion) return showMouth(actor, "Neutral");
       if (time > nextBlink) {
@@ -834,14 +1057,58 @@ import { scenes } from "../data/scenes";
       showMouth(actor, "Neutral");
     }
 
-    function call(actor: Actor, dt: number) {
-      const on = actor === current() && talking();
-      if (on && time > talk.until) {
-        // he talks in bursts, then listens while one of the tiles has the floor
-        const listening = talk.who === -1;
-        talk.who = listening ? Math.floor(rand(0, actor.tiles.length)) : -1;
-        talk.until = time + (listening ? rand(0.5, 1.5) : rand(1.2, 2.8));
+    // The robot's own life: it types and blinks away by itself, and when he turns to
+    // talk to it, it stops, turns its head to him and nods along.
+    let agentBlink = rand(1, 3);
+    const xAxis = new THREE.Vector3(1, 0, 0);
+    const buddyTurn = new THREE.Quaternion();
+    function buddy(actor: Actor, dt: number) {
+      const a = actor.agent!;
+      const chatting = actor === current() && !!activity()?.buddy && !state.waving;
+      if (chatting !== a.chatting) {
+        a.chatting = chatting;
+        if (chatting) a.listen?.reset().fadeIn(0.3).play();
+        else a.listen?.fadeOut(0.3);
       }
+      a.turn += ((chatting ? 1 : 0) - a.turn) * (1 - Math.exp(-dt * 5));
+      // once it has faded out, let go of the nodes so the idle motion below can have them back
+      if (a.listen && !chatting && a.turn < 0.02 && a.listen.isRunning()) a.listen.stop();
+      const scripted = !!a.listen?.isRunning();
+      const itSpeaks = chatting && talk.who !== -1;
+
+      if (time > agentBlink + 0.11) agentBlink = time + rand(1.5, 4.5);
+      for (const eye of a.eyes) eye.obj.scale.y = eye.scale.y * (time > agentBlink ? 0.12 : 1);
+      // screen flicker, brighter when it has something to say
+      const flicker = 0.85 + 0.15 * Math.sin(time * 23) * Math.sin(time * 7.3) + (itSpeaks ? 0.5 + 0.3 * Math.sin(time * 19) : 0);
+      for (const mat of a.glow) mat.emissiveIntensity = (mat.userData.rest || 1) * flicker;
+      if (a.light) a.light.intensity = 0.3 * flicker * smooth(presence[WORK]);
+      if (scripted) return; // its clip is moving the head, arms and antenna
+      const looks = actor === current() ? clamp(noticed.w, 0, 1) : 0;
+
+      a.arms.forEach((arm, i) => {
+        // alternate taps at its tablet, on top of the reach the model rests in
+        buddyTurn.setFromAxisAngle(xAxis, Math.sin(time * 13 + i * Math.PI) * 0.1 * (1 - a.turn) * (1 - looks));
+        arm.obj.quaternion.copy(arm.quat).multiply(buddyTurn);
+      });
+      if (a.antenna) a.antenna.obj.rotation.z = a.antenna.rot.z + Math.sin(time * 3.1) * 0.08;
+      if (a.head) {
+        const head = a.head.obj;
+        if (chatting && actor.head) {
+          // no clip for its side: work out where he is as a turn of its neck (it faces +Z at rest)
+          head.parent.worldToLocal(actor.head.getWorldPosition(v)).sub(head.position);
+          // a part turn only, so its eyes stay in view of the camera
+          a.yaw = clamp(Math.atan2(v.x, v.z), -0.45, 0.45);
+        }
+        // when he notices the visitor, so does it: hands off the keys, face up to the lens
+        head.parent.worldToLocal(v.copy(camera.position)).sub(head.position);
+        const lensYaw = clamp(Math.atan2(v.x, v.z), -0.6, 0.6);
+        head.rotation.y = a.head.rot.y + (a.yaw * a.turn + Math.sin(time * 0.8) * 0.1 * (1 - a.turn)) * (1 - looks) + lensYaw * looks;
+        head.rotation.x = a.head.rot.x + Math.sin(time * 4.5) * 0.09 * a.turn * (1 - looks) - 0.12 * looks;
+      }
+    }
+
+    function call(actor: Actor, dt: number) {
+      const on = actor === current() && !!activity()?.tiles;
       actor.tiles.forEach((tile, i) => {
         // same pop as the props, one after another
         const rate = on ? timing.propsIn + i * 0.25 : timing.propsOut;
@@ -864,6 +1131,8 @@ import { scenes } from "../data/scenes";
     const m4 = new THREE.Matrix4();
     const q0 = new THREE.Quaternion();
     let sprayDue = 0;
+    let netBusy = false;
+    let netUntil = 0;
     let dropsDue = 0;
 
     // `instant` jumps every easing to its end: the reduced-motion path, and first paint.
@@ -892,14 +1161,15 @@ import { scenes } from "../data/scenes";
       const atFarm = smooth(presence[FARM]);
       const atSurf = smooth(presence[SURF]);
 
-      // typing ↔ call, watering ↔ pulling: whatever the clock says he should be doing
-      if (actor?.also && cfg?.also && !reduceMotion && !state.waving) {
-        const on = clock >= cfg.also.from && clock < cfg.also.to;
-        if (on !== state.onAlso) {
-          state.onAlso = on;
+      // typing, the call, a word with the agent; watering, pulling: whatever the clock says
+      if (actor && cfg?.also && !reduceMotion && !state.waving) {
+        const now = cfg.also.findIndex((a, i) => actor.also[i] && clock >= a.from && clock < a.to);
+        if (now !== state.also) {
+          state.also = now;
           fadeTo(actor, baseAction(actor), timing.crossfade);
         }
       }
+      if (actor && talking()) converse(activity()!.tiles ? actor.tiles.length : 1);
 
       items.forEach((list, i) => {
         const coming = i === state.index;
@@ -940,7 +1210,13 @@ import { scenes } from "../data/scenes";
         // on stage while anything of his is: arriving, here, or still shrinking away
         a.root.visible = items[i].some((item) => item.t > 0);
         if (!a.root.visible) return;
+        // The mixer only rewrites a bone when its animated value changes, so last frame's
+        // look toward the viewer has to be taken off before it runs and re-applied after.
+        for (const l of a.lookChain) l.bone.quaternion.copy(l.pose);
+        if (a.pet?.head) a.pet.head.quaternion.copy(a.pet.pose);
         a.mixer.update(instant ? 0 : dt);
+        for (const l of a.lookChain) l.pose.copy(l.bone.quaternion);
+        if (a.pet?.head) a.pet.pose.copy(a.pet.head.quaternion);
         a.root.rotation.y = spin.yaw;
         if (i === SURF) {
           a.root.position.y = ((at(0.8, 0) + at(-0.8, 0)) / 2) * 0.9;
@@ -949,7 +1225,10 @@ import { scenes } from "../data/scenes";
         }
         if (a.glow) a.glow.intensity = atWork * (0.35 + still * 0.06 * Math.sin(time * 9) * Math.sin(time * 2.3));
         if (a.tiles.length) call(a, dt);
+        if (a.agent && !reduceMotion) buddy(a, dt);
         if (a === actor) face(a);
+        if (a === actor && !reduceMotion) notice(a, dt);
+        if (a === actor && a.pet && !reduceMotion) petLife(a, clock);
       });
 
       // -- ambient life --
@@ -965,6 +1244,23 @@ import { scenes } from "../data/scenes";
 
       const farmer = actors[FARM];
       if (atFarm > 0) {
+        farmer?.leds.forEach((mats, i) => {
+          let lit = 0.6; // reduced motion: steady and dim
+          if (!reduceMotion) {
+            if (i === 0) {
+              // heartbeat: a short flash once a second
+              lit = time % 1 < 0.12 ? 4 : 0.08;
+            } else {
+              // network activity: bursts of quick flicker with quiet gaps between
+              if (time > netUntil) {
+                netBusy = !netBusy;
+                netUntil = time + (netBusy ? rand(0.3, 0.9) : rand(0.4, 1.8));
+              }
+              lit = netBusy && Math.sin(time * 61) * Math.sin(time * 23) > -0.1 ? 4 : 0.08;
+            }
+          }
+          for (const mat of mats ?? []) mat.emissiveIntensity = lit;
+        });
         farmer?.sprouts.forEach((s, i) => {
           s.obj.rotation.z = s.rest.z + Math.sin(time * 1.7 + i * 1.3) * 0.11 * still;
           s.obj.rotation.x = s.rest.x + Math.sin(time * 1.3 + i * 2.1) * 0.06 * still;
@@ -986,7 +1282,7 @@ import { scenes } from "../data/scenes";
       }
       if (!reduceMotion) {
         dropsDue -= dt;
-        if (farmer?.spout && farmer.can && presence[FARM] === 1 && dropsDue <= 0) {
+        if (farmer?.spout && farmer.can && presence[FARM] === 1 && dropsDue <= 0 && !state.waving) {
           farmer.spout.getWorldPosition(v);
           farmer.can.getWorldPosition(v2);
           // pouring whenever the spout tip dips below the body of the can
@@ -999,6 +1295,17 @@ import { scenes } from "../data/scenes";
           }
         }
         drops.update(dt, 5, 0.06);
+
+        // the bed waters itself too: a bead from each emitter every second or two
+        if (presence[FARM] === 1) {
+          for (const drip of farmer?.drips ?? []) {
+            drip.due -= dt;
+            if (drip.due > 0) continue;
+            drip.due = rand(1.2, 2.5);
+            drips.spawn(drip.obj.getWorldPosition(v), v2.set(0, 0, 0), 0.24);
+          }
+        }
+        drips.update(dt, 3, -1);
 
         sprayDue -= dt;
         const surfer = actors[SURF];

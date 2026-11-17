@@ -18,10 +18,20 @@ export interface SceneConfig {
   clip: string;
   /** Every prop node for this scene starts with this name. */
   props: string;
-  /** A second activity he switches to between two clock times, if the model has
-   *  the clip. `tiles`: nodes named `${tiles}0..N` float up while it lasts (and
-   *  it only runs if they exist). `talks`: his mouth moves as on a call. */
-  also?: { clip: string; from: number; to: number; tiles?: string; talks?: boolean };
+  /** Side activities he switches to between two clock times (they must not
+   *  overlap), each only if the model has its clip. `tiles`: nodes named
+   *  `${tiles}0..N` float up while it lasts (and it only runs if they exist).
+   *  `talks`: his mouth moves as in conversation. `buddy`: the desk robot turns
+   *  to him and listens. */
+  also?: { clip: string; from: number; to: number; tiles?: string; talks?: boolean; buddy?: boolean }[];
+  /** A pet with two node clips on this scene's model: it loops `rest`, and at each
+   *  clock time in `spells` plays `spell` for that many whole loops. `head` is the
+   *  node that turns to the visitor on a tap. */
+  pet?: { rest: string; spell: string; head: string; spells: { at: number; loops: number }[] };
+  /** How he turns to face the visitor when tapped. Only these bones move (the
+   *  props never do): each takes its share of the turn, and the whole turn stops
+   *  at `limit` radians even if the camera is further round than that. */
+  turn: { bones: [bone: string, share: number][]; limit: number };
   /** Resting yaw in radians (0 = facing the camera). Chosen so props don't hide him. */
   homeYaw: number;
   /** What the camera must show: metres across, metres above the ground, and how
@@ -39,11 +49,26 @@ export const scenes: SceneConfig[] = [
     model: "/models/anando_work.glb",
     clip: "Laptop",
     props: "Prop_Laptop",
-    // types for the first 8 s or so, then a mid-morning video call
-    also: { clip: "Laptop_Call", from: 10.33, to: 12.5, tiles: "Prop_Laptop_CallTile", talks: true },
+    // 6 real seconds per clock hour here: he types, has a word with his agent,
+    // takes a mid-morning video call, checks in with the agent again before lunch.
+    // The agent chats are 5 s long (0.83 h) to fit the `Laptop_Agent` clip exactly.
+    also: [
+      { clip: "Laptop_Agent", from: 9.5, to: 10.33, talks: true, buddy: true },
+      { clip: "Laptop_Call", from: 10.5, to: 12.0, tiles: "Prop_Laptop_CallTile", talks: true },
+      { clip: "Laptop_Agent", from: 12.1, to: 12.93, talks: true, buddy: true },
+    ],
+    // Imly sleeps on the desk the whole morning (the grooming pose is unused for now)
+    pet: {
+      rest: "Imly_Sleep",
+      spell: "Imly_Groom",
+      head: "Prop_Laptop_ImlyGroomHead",
+      spells: [],
+    },
+    // seated: he twists in the chair
+    turn: { bones: [["Spine", 0.1], ["Spine01", 0.12], ["Spine02", 0.18], ["neck", 0.25], ["Head", 0.35]], limit: 1.35 },
     homeYaw: 0.6,
     // tall enough for the wall clock above his head
-    frame: { width: 2.4, height: 2.12, pitch: 9 },
+    frame: { width: 2.6, height: 2.12, pitch: 9 },
     alt: "working at his laptop",
   },
   {
@@ -54,9 +79,11 @@ export const scenes: SceneConfig[] = [
     clip: "Farm",
     props: "Prop_Farm",
     // waters first, then pulls a vegetable mid-afternoon
-    also: { clip: "Farm_Pull", from: 15, to: 16.5 },
+    also: [{ clip: "Farm_Pull", from: 15, to: 16.5 }],
+    // standing: the hips come round too, feet pivoting a little
+    turn: { bones: [["Hips", 0.3], ["Spine", 0.08], ["Spine01", 0.1], ["Spine02", 0.12], ["neck", 0.17], ["Head", 0.23]], limit: 2.0 },
     homeYaw: -0.45,
-    frame: { width: 2.7, height: 2.0, pitch: 9 },
+    frame: { width: 3.0, height: 2.0, pitch: 9 },
     alt: "watering a bed of seedlings",
   },
   {
@@ -66,6 +93,8 @@ export const scenes: SceneConfig[] = [
     model: "/models/anando_surf.glb",
     clip: "Surf",
     props: "Prop_Surf",
+    // feet planted on the board: torso, neck and head only
+    turn: { bones: [["Spine", 0.1], ["Spine01", 0.12], ["Spine02", 0.18], ["neck", 0.25], ["Head", 0.35]], limit: 1.35 },
     homeYaw: -0.55,
     // the board is 2.1 m long and can be spun through any angle
     frame: { width: 3.0, height: 2.05, pitch: 13 },

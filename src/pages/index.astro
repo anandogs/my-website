@@ -2,9 +2,12 @@
 // Homepage: who Anando is on the left, a day in his life in 3D on the right.
 // The character sets <html data-scene> and repaints the palette as his clock runs.
 import Character3D from "../components/Character3D.astro";
+import { copy, tagline } from "../data/copy";
+import { scenes } from "../data/scenes";
 
 const links = [
   { label: "Substack", href: "https://substack.com/@anandoghose", aria: "Follow me on Substack" },
+  { label: "Medium", href: "https://medium.com/@anandoghose", aria: "Read me on Medium" },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/anandoghose/", aria: "Connect with me on LinkedIn" },
   { label: "GitHub", href: "https://github.com/anandogs", aria: "See my code on GitHub" },
   { label: "Instagram", href: "https://www.instagram.com/anandoghose/", aria: "Follow me on Instagram" },
@@ -17,11 +20,11 @@ const links = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Anando Ghose - Automation, Tech, Finance</title>
-    <meta name="title" content="Anando Ghose | Automation, Tech, Finance" />
+    <title>Anando Ghose | AI agents, automations, AI training</title>
+    <meta name="title" content="Anando Ghose | AI agents, automations, AI training" />
     <meta
       name="description"
-      content="Finance automation specialist with expertise in reporting & analytics. Self-taught programmer, with MBA from Indian School of Business."
+      content="Anando Ghose builds AI agents with LangGraph, AI infrastructure and reporting automations, manages developers, and teaches teams to use AI at work."
     />
     <meta name="author" content="Anando Ghose" />
     <meta
@@ -32,11 +35,11 @@ const links = [
     <meta property="og:url" content="https://anandoghose.com/" />
     <meta
       property="og:title"
-      content="Anando Ghose | Automation, Tech, Finance"
+      content="Anando Ghose | AI agents, automations, AI training"
     />
     <meta
       property="og:description"
-      content="Finance automation specialist with expertise in reporting & analytics. Self-taught programmer, with MBA from Indian School of Business."
+      content="Anando Ghose builds AI agents with LangGraph, AI infrastructure and reporting automations, manages developers, and teaches teams to use AI at work."
     />
     <meta
       property="og:image"
@@ -46,11 +49,11 @@ const links = [
     <meta property="twitter:url" content="https://anandoghose.com/" />
     <meta
       property="twitter:title"
-      content="Anando Ghose | Automation, Tech, Finance"
+      content="Anando Ghose | AI agents, automations, AI training"
     />
     <meta
       property="twitter:description"
-      content="Finance automation specialist with expertise in reporting & analytics. Self-taught programmer, with MBA from Indian School of Business."
+      content="Anando Ghose builds AI agents with LangGraph, AI infrastructure and reporting automations, manages developers, and teaches teams to use AI at work."
     />
     <meta
       property="twitter:image"
@@ -76,8 +79,8 @@ const links = [
         "name": "Anando Ghose",
         "url": "https://anandoghose.com",
         "email": "me@anandoghose.com",
-        "jobTitle": "Finance Automation Specialist",
-        "description": "Finance automation specialist with expertise in reporting & analytics. Self-taught programmer who learned programming through Harvard's CS50  online course. MBA graduate from the Indian School of Business.",
+        "jobTitle": "Automation and AI Agent Builder",
+        "description": "Builds AI agents with LangGraph, AI infrastructure, and reporting and analytics automations. Manages developers and teaches teams to use AI at work. Self-taught programmer (Harvard CS50) with an MBA from the Indian School of Business.",
         "alumniOf": [
           {
             "@type": "CollegeOrUniversity",
@@ -91,11 +94,15 @@ const links = [
           }
         ],
         "knowsAbout": [
+          "AI Agents",
+          "LangGraph",
+          "AI Infrastructure",
+          "Reporting Automation",
           "Finance Automation",
           "Analytics",
-          "Machine Learning",
-          "Data Science",
-          "Web Development",
+          "AI Training",
+          "Project Management",
+          "IoT for Farming",
           "Programming"
         ],
         "sameAs": [
@@ -103,7 +110,8 @@ const links = [
           "https://github.com/anandogs",
           "https://www.instagram.com/anandoghose/",
           "https://www.youtube.com/channel/UCb8LzmczkHjCz0Bhvgg-QjA",
-          "https://substack.com/@anandoghose"
+          "https://substack.com/@anandoghose",
+          "https://medium.com/@anandoghose"
         ]
       }
     </script>
@@ -116,11 +124,22 @@ const links = [
           Hi, I'm Anando,
           <span class="nickname" id="nickname">an automation sage</span>
         </h1>
-        <p class="about">
-          I build automations for reporting &amp; analytics, and like turning
-          complex problems into elegant solutions. Self-taught programmer. MBA
-          from the Indian School of Business.
-        </p>
+        <p class="tagline">{tagline}</p>
+
+        <div class="scene-copy">
+          {
+            scenes.map(({ id }) => (
+              <section data-copy={id}>
+                <p>{copy[id].body}</p>
+                {copy[id].link && (
+                  <a href={copy[id].link.href} target="_blank" rel="noopener noreferrer">
+                    {copy[id].link.label} &rarr;
+                  </a>
+                )}
+              </section>
+            ))
+          }
+        </div>
 
         <a href="mailto:me@anandoghose.com" class="email" id="copy-email">Email me</a>
 
@@ -223,12 +242,84 @@ const links = [
         transform: translateY(0.2em) rotate(-1deg);
       }
 
-      .about {
+      .tagline {
         max-width: 29rem;
         margin-top: 1.5rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+        line-height: 1.45;
+      }
+
+      /* One block per scene, all in the same grid cell: the cell is as tall as the
+         longest, so swapping them never moves the page. <html data-scene> picks
+         which one shows. */
+      .scene-copy {
+        display: grid;
+        max-width: 29rem;
+        margin-top: 1rem;
+      }
+
+      .scene-copy section {
+        grid-area: 1 / 1;
+        opacity: 0;
+        visibility: hidden;
+        /* out first, then the next one in: the same beat as the nickname swap */
+        transition:
+          opacity 0.18s ease,
+          visibility 0s 0.18s;
+      }
+
+      :global(:root[data-scene="work"]) .scene-copy [data-copy="work"],
+      :global(:root[data-scene="farm"]) .scene-copy [data-copy="farm"],
+      :global(:root[data-scene="surf"]) .scene-copy [data-copy="surf"] {
+        opacity: 1;
+        visibility: visible;
+        transition:
+          opacity 0.18s ease 0.18s,
+          visibility 0s 0.18s;
+      }
+
+      .scene-copy h2 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .scene-copy p {
+        margin-top: 0.4rem;
         font-size: 1.05rem;
         line-height: 1.65;
         color: var(--ink-soft);
+      }
+
+      .scene-copy a {
+        display: inline-block;
+        margin-top: 0.5rem;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: underline;
+        text-decoration-color: var(--accent);
+        text-underline-offset: 0.25em;
+      }
+
+      .scene-copy a:hover {
+        color: var(--accent);
+      }
+
+      /* Nothing on stage to follow: show the whole day, one block after another. */
+      :global(:root[data-character="failed"]) .scene-copy {
+        display: block;
+      }
+      :global(:root[data-character="failed"]) .scene-copy section {
+        opacity: 1;
+        visibility: visible;
+        transition: none;
+      }
+      :global(:root[data-character="failed"]) .scene-copy section + section {
+        margin-top: 1.25rem;
       }
 
       .email {
@@ -289,10 +380,23 @@ const links = [
         inset: -35% 0 0 -35%;
         --x: calc(26% + var(--sun-x) * 0.74);
         --y: calc(26% + var(--sun-y) * 0.74);
-        background:
-          radial-gradient(circle at var(--x) var(--y), var(--sun-core) 0 2.1rem, transparent 2.25rem),
-          radial-gradient(45% 40% at var(--x) var(--y), var(--glow) 0%, transparent 70%);
+        background: radial-gradient(45% 40% at var(--x) var(--y), var(--glow) 0%, transparent 70%);
         pointer-events: none;
+      }
+
+      /* The disc itself only shows outdoors: indoors at the desk it's just window light. */
+      .stage::after {
+        content: "";
+        position: absolute;
+        inset: -35% 0 0 -35%;
+        --x: calc(26% + var(--sun-x) * 0.74);
+        --y: calc(26% + var(--sun-y) * 0.74);
+        background: radial-gradient(circle at var(--x) var(--y), var(--sun-core) 0 2.1rem, transparent 2.25rem);
+        pointer-events: none;
+        transition: opacity 0.6s ease;
+      }
+      :global(:root[data-scene="work"]) .stage::after {
+        opacity: 0;
       }
 
       /* No WebGL, or the model never arrived: the page is simply the words. */
@@ -321,9 +425,18 @@ const links = [
           margin-bottom: 0.75rem;
         }
 
-        .about {
+        .tagline {
           margin-top: 1rem;
+          font-size: 1.05rem;
+        }
+
+        .scene-copy {
+          margin-top: 0.75rem;
+        }
+
+        .scene-copy p {
           font-size: 1rem;
+          line-height: 1.55;
         }
 
         .email {
@@ -337,7 +450,9 @@ const links = [
 
         .stage {
           height: auto;
-          min-height: max(24rem, 52dvh);
+          /* takes what the copy leaves of the first screen, so he stays above the
+             fold on a tall phone; only short screens have to scroll to his feet */
+          min-height: max(17rem, 34dvh);
         }
 
         :global(:root[data-character="failed"]) .intro {
@@ -349,6 +464,19 @@ const links = [
       @media (prefers-reduced-motion: reduce) {
         .nickname {
           transition: none;
+        }
+
+        /* the stage stays on the morning, so the copy shows the whole day stacked */
+        .scene-copy {
+          display: block;
+        }
+        .scene-copy section {
+          opacity: 1;
+          visibility: visible;
+          transition: none;
+        }
+        .scene-copy section + section {
+          margin-top: 1.25rem;
         }
       }
     </style>
