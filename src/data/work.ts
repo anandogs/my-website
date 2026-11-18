@@ -6,6 +6,9 @@ export interface Capability {
   area: string;
   built: string[];
   tech: string[];
+  /** His own projects, outside work. The agent may say so, and may say who one was
+   *  for in the words used here (a friend, a farm), still without naming anyone. */
+  personal?: boolean;
 }
 
 export const work: Capability[] = [
@@ -90,5 +93,52 @@ export const work: Capability[] = [
       "Prototypes: a rate prediction model and a knowledge graph of operating procedures",
     ],
     tech: ["Python", "Whisper", "Svelte", "scikit-learn", "Neo4j"],
+  },
+  {
+    area: "IoT and home automation",
+    personal: true,
+    built: [
+      "A plant-watering valve on a microcontroller that opens when it gets a message over the home network and shuts itself off after a set time (my own garden, prototype)",
+      "Soil-moisture sensing on a microcontroller: reading the sensors, calibrating them, and bench-testing a servo (experiments)",
+      "A phone lockbox guarded by an AI assistant, which asks for a reason before unlocking and keeps a log of every time (prototype)",
+    ],
+    tech: ["ESP8266", "NodeMCU", "Arduino", "MicroPython", "MQTT", "MCP", "Python", "SQLite"],
+  },
+  {
+    area: "Farm and community projects",
+    personal: true,
+    built: [
+      "An interactive 3D map of a farm, built from a land survey, where you can walk around and tap a tree to see what it is (deployed)",
+      "The website of an organic farm, rebuilt several times over the years",
+      "A registration and produce-sales app for farmers (prototype)",
+      "A question-answering agent about government schemes that replies in Indian languages, from a knowledge base and web search (prototype)",
+      "An introduction-to-AI session for Tamil-speaking facilitators, with a voice translator app between English and Tamil",
+      "A calculator that turns a carbon figure into everyday equivalents (prototype)",
+    ],
+    tech: ["three.js", "Next.js", "Astro", "React", "Django", "FastAPI", "LangGraph", "Flutter"],
+  },
+  {
+    area: "Personal apps",
+    personal: true,
+    built: [
+      "A buy-in tracker for home poker games that works out who pays whom at the end of the night (deployed, used with friends)",
+      "A daily habit tracker with streaks (deployed)",
+      "A pipeline that takes heart-rate variability and sleep data from my phone into a database, which an AI coach reads to write my weekly training plans (in use)",
+      "A goal tracker that checks tasks against the time actually logged",
+      "A command-line tool that helps a group of friends agree on a movie",
+    ],
+    tech: ["Next.js", "React", "TypeScript", "Firebase", "Python", "SQLite", "Flask", "Rust", "iOS Shortcuts"],
+  },
+  {
+    area: "Websites for friends and small organisations",
+    personal: true,
+    built: [
+      "Websites for a surf school, a theatre artist, a yoga teacher, an adventure-travel group and an impact-measurement consultancy (deployed)",
+      "An RSVP site for a friend's wedding",
+      "An impact page on a craft social enterprise's online store (deployed)",
+      "A booking app and travel site for a bike-rental startup (prototype)",
+      "A stock-management app and store scripts for a small retail business",
+    ],
+    tech: ["Astro", "Svelte", "Gatsby", "Next.js", "Vue", "Contentful", "Shopify", "Django", "Flutter"],
   },
 ];

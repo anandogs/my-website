@@ -180,6 +180,190 @@ import { scenes } from "../data/scenes";
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 50);
 
+    // ---- Oil paint ---------------------------------------------------------------------
+    // The scene is drawn off screen, then repainted in two passes: a Kuwahara filter
+    // melts it into flat colour, then it is covered in separate dabs of a loaded brush.
+    // Each dab is one flat colour (the scene's, where the brush touched down), runs along
+    // the nearest edge, and overlaps its neighbours and the silhouette. A dab never
+    // covers something very unlike itself, which is what keeps eyes and stripes crisp.
+    // A share of the dabs are re-laid every tick.
+    const PAINT = {
+      daub: 1.5, // Kuwahara tap spacing, CSS px: what shows between the dabs
+      cell: 16, // CSS px between dabs; must stay ≥ 0.65 × length or dabs get cut off
+      length: 25, // CSS px, give or take a third
+      width: 11,
+      keep: 0.15, // how different a colour must be for a dab to leave it alone (0–1)
+      boilFps: 3,
+    };
+    const noiseData = new Uint8Array(256 * 256 * 4);
+    for (let i = 0; i < noiseData.length; i++) noiseData[i] = Math.random() * 256;
+    const noise = new THREE.DataTexture(noiseData, 256, 256);
+    noise.wrapS = noise.wrapT = THREE.RepeatWrapping;
+    noise.magFilter = noise.minFilter = THREE.LinearFilter;
+    noise.needsUpdate = true;
+    const drawn = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+    const daubed = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    const paintVertex = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+    const pass = (uniforms: Record<string, { value: unknown }>, fragmentShader: string) =>
+      new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: paintVertex,
+        fragmentShader,
+        blending: THREE.NoBlending,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      });
+    const daubPass = pass(
+      { tMap: { value: drawn.texture }, uPx: { value: new THREE.Vector2() }, uStep: { value: 1 } },
+      `
+      uniform sampler2D tMap; uniform vec2 uPx; uniform float uStep; varying vec2 vUv;
+      void main() {
+        vec4 best = vec4(0.0); float least = 1e9;
+        for (int q = 0; q < 4; q++) {
+          vec2 side = vec2(mod(float(q), 2.0), floor(float(q) / 2.0)) * 2.0 - 1.0;
+          vec4 m = vec4(0.0), m2 = vec4(0.0);
+          for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) {
+            vec4 c = texture2D(tMap, vUv + side * vec2(float(i), float(j)) * uStep * uPx);
+            m += c; m2 += c * c;
+          }
+          m /= 9.0; m2 = abs(m2 / 9.0 - m * m);
+          float spread = m2.r + m2.g + m2.b + m2.a;
+          if (spread < least) { least = spread; best = m; }
+        }
+        gl_FragColor = best;
+      }`,
+    );
+    const strokePass = pass(
+      {
+        tMap: { value: daubed.texture },
+        tNoise: { value: noise },
+        uRes: { value: new THREE.Vector2() },
+        uDpr: { value: 1 },
+        uCell: { value: PAINT.cell },
+        uLength: { value: PAINT.length },
+        uWidth: { value: PAINT.width },
+        uKeep: { value: PAINT.keep },
+        uTick: { value: 0 },
+      },
+      `
+      uniform sampler2D tMap, tNoise; uniform vec2 uRes;
+      uniform float uDpr, uCell, uLength, uWidth, uKeep, uTick; varying vec2 vUv;
+      const vec3 LUMA = vec3(0.3, 0.59, 0.11);
+      float tone(vec2 p) { vec4 c = texture2D(tMap, p / uRes); return dot(c.rgb, LUMA) + 0.5 * c.a; }
+      vec4 hash4(vec2 p) {
+        vec4 q = fract(p.xyxy * vec4(0.1031, 0.1030, 0.0973, 0.1099));
+        q += dot(q, q.wzxy + 33.33);
+        return fract((q.xxyz + q.yzzw) * q.zywx);
+      }
+      // to screen colour, eased toward a calm, slightly sun-bleached palette
+      vec4 finish(vec4 c) {
+        vec3 rgb = linearToOutputTexel(vec4(c.a > 1e-4 ? c.rgb / c.a : vec3(0.0), 1.0)).rgb;
+        float l = dot(rgb, LUMA);
+        rgb = mix(vec3(l), rgb, 1.06);
+        rgb = mix(rgb, rgb * vec3(0.86, 0.93, 1.12), (1.0 - smoothstep(0.0, 0.5, l)) * 0.4);
+        rgb = mix(rgb, vec3(0.96, 0.91, 0.8), 0.09);
+        return vec4(clamp(rgb, 0.0, 1.0) * c.a, c.a);
+      }
+      void main() {
+        vec2 p = vUv * uRes;
+        float cell = uCell * uDpr;
+        vec4 under = texture2D(tMap, vUv);
+        vec4 paint = under;
+        float top = -1.0;
+        vec4 below = under; // the next dab down, which shows through the top one's soft edge
+        float next = -1.0;
+        float cover = 1.0;
+        vec4 mark = vec4(0.0); // along, across (−1…1), and two numbers of the dab's own
+        // two staggered grids of dabs; the one with the highest number lies on top
+        for (int layer = 0; layer < 2; layer++) {
+          float off = float(layer) * 0.5;
+          vec2 home = floor(p / cell + off);
+          for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+            vec2 id = home + vec2(float(i), float(j));
+            vec4 own = hash4(id + off * 142.6 + 7.0);
+            // re-laid every fourth tick, each dab on its own beat
+            vec4 lay = hash4(id + off * 91.7 + floor((uTick + own.w * 4.0) / 4.0) * 13.7);
+            vec2 at = (id + 0.5 - off + (lay.xy - 0.5) * 0.8) * cell;
+            vec4 c = texture2D(tMap, at / uRes);
+            if (c.a < 0.5) continue;
+            // along the nearest edge; across open colour, in slow swirls
+            float e = 2.0 * uDpr;
+            vec2 grad = vec2(tone(at + vec2(e, 0.0)) - tone(at - vec2(e, 0.0)), tone(at + vec2(0.0, e)) - tone(at - vec2(0.0, e)));
+            float steep = length(grad);
+            float turn = texture2D(tNoise, at / (uDpr * 256.0 * 240.0)).r * 9.0 + (lay.z - 0.5) * 0.35;
+            vec2 swirl = vec2(cos(turn), sin(turn));
+            vec2 along = vec2(-grad.y, grad.x) / max(steep, 1e-5);
+            if (dot(along, swirl) < 0.0) along = -along;
+            vec2 dir = normalize(mix(swirl, along, smoothstep(0.02, 0.14, steep)));
+            vec2 rel = p - at;
+            float u = dot(rel, dir);
+            float v = dot(rel, vec2(-dir.y, dir.x));
+            float halfL = uLength * uDpr * 0.5 * (0.7 + 0.6 * own.x);
+            float halfW = uWidth * uDpr * 0.5 * (0.7 + 0.6 * own.y);
+            // the bristles lift off unevenly, so the ends are ragged and the sides clean
+            float ragged = texture2D(tNoise, vec2(v / (uDpr * 1.6 * 256.0), own.z)).r;
+            if (abs(v) > halfW || abs(u) > halfL * (0.7 + 0.3 * ragged)) continue;
+            if (under.a > 0.5 && distance(c.rgb / c.a, under.rgb / under.a) > uKeep) continue;
+            float rank = fract(own.z * 7.31 + own.x);
+            vec4 dab = vec4(c.rgb / c.a, 1.0) * (c.a > 0.9 ? 1.0 : c.a);
+            if (rank < top) {
+              if (rank > next) { next = rank; below = dab; }
+              continue;
+            }
+            if (top >= 0.0) { next = top; below = paint; }
+            top = rank;
+            paint = dab;
+            mark = vec4(u / halfL, v / halfW, lay.z, own.y);
+            // a soft brush: the paint thins out toward the sides and the ends
+            cover = smoothstep(1.0, 0.55, abs(v) / halfW) * smoothstep(1.0, 0.6, abs(u) / (halfL * (0.7 + 0.3 * ragged)));
+          }
+        }
+        vec4 soft = finish(below);
+        vec4 wet = finish(paint);
+        if (top >= 0.0) {
+          vec3 rgb = wet.a > 1e-4 ? wet.rgb / wet.a : vec3(0.0);
+          // no two loads of the brush are quite the same colour
+          rgb *= 1.0 + (mark.z - 0.5) * 0.13;
+          rgb += (mark.w - 0.5) * vec3(0.05, 0.01, -0.05);
+          // a little body to the paint: lit down one side, faint bristle tracks
+          rgb += -mark.y * 0.02;
+          rgb *= 1.0 + (texture2D(tNoise, vec2(mark.x * 0.02 + mark.z, mark.y * 0.035 + mark.w)).g - 0.5) * 0.06;
+          wet = mix(soft, vec4(clamp(rgb, 0.0, 1.0) * wet.a, wet.a), cover);
+        }
+        gl_FragColor = wet;
+      }`,
+    );
+    const easel = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), daubPass);
+    easel.frustumCulled = false;
+    const easelCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const bufferSize = new THREE.Vector2();
+    function sizePaint() {
+      if (!painted) return;
+      renderer.getDrawingBufferSize(bufferSize);
+      const dpr = renderer.getPixelRatio();
+      drawn.setSize(bufferSize.x, bufferSize.y);
+      daubed.setSize(bufferSize.x, bufferSize.y);
+      daubPass.uniforms.uPx.value.set(1 / bufferSize.x, 1 / bufferSize.y);
+      daubPass.uniforms.uStep.value = PAINT.daub * dpr;
+      strokePass.uniforms.uRes.value.copy(bufferSize);
+      strokePass.uniforms.uDpr.value = dpr;
+    }
+    // off unless the page is opened with ?paint=1
+    const painted = new URLSearchParams(location.search).get("paint") === "1";
+    function paint(now: number) {
+      if (!painted) return renderer.render(scene, camera);
+      strokePass.uniforms.uTick.value = Math.floor(now * PAINT.boilFps);
+      renderer.setRenderTarget(drawn);
+      renderer.render(scene, camera);
+      easel.material = daubPass;
+      renderer.setRenderTarget(daubed);
+      renderer.render(easel, easelCamera);
+      easel.material = strokePass;
+      renderer.setRenderTarget(null);
+      renderer.render(easel, easelCamera);
+    }
+
     const fill = new THREE.HemisphereLight();
     scene.add(fill);
     const sun = new THREE.DirectionalLight();
@@ -1339,7 +1523,7 @@ import { scenes } from "../data/scenes";
       }
       placeCamera();
 
-      renderer.render(scene, camera);
+      paint(time);
     }
 
     // ---- Run only while someone can see it, and hasn't paused it ---------------------------
@@ -1368,6 +1552,7 @@ import { scenes } from "../data/scenes";
       const h = host.clientHeight;
       if (!w || !h) return;
       renderer.setSize(w, h, false);
+      sizePaint();
       camera.aspect = w / h;
       // setSize clears the canvas; redraw now rather than flash until the next frame
       step(0, reduceMotion);

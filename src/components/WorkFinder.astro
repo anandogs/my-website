@@ -120,25 +120,93 @@
     color: var(--ink);
   }
 
-  /* "thinking" with dots that arrive one after another, over and over */
-  .finder-status.is-thinking::after {
+  /* thinking: one accent bead breathing beside the word */
+  .finder-status.is-thinking::before {
     content: "";
     display: inline-block;
-    width: 1.2em;
-    text-align: left;
-    animation: finder-dots 1.4s steps(1, end) infinite;
+    width: 0.45em;
+    height: 0.45em;
+    margin-right: 0.5em;
+    vertical-align: 0.1em;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: finder-pulse 700ms cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+  }
+  @keyframes finder-pulse {
+    from { opacity: 0.3; transform: scale(0.7); }
+    to { opacity: 1; transform: scale(1); }
   }
 
-  @keyframes finder-dots {
-    0% { content: ""; }
-    25% { content: "."; }
-    50% { content: ".."; }
-    75% { content: "..."; }
+  /* The panel comes out of the box quickly and goes back quicker. `hidden` stays the
+     only state: browsers without @starting-style just show and hide it at once. */
+  .finder-panel {
+    --finder-from: translateY(-4px);
+    transition:
+      opacity 170ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      display 170ms allow-discrete;
+  }
+  @starting-style {
+    .finder-panel {
+      opacity: 0;
+      transform: var(--finder-from);
+    }
+  }
+  .finder-panel[hidden] {
+    opacity: 0;
+    transform: var(--finder-from);
+    pointer-events: none;
+    transition:
+      opacity 110ms cubic-bezier(0.4, 0, 1, 1),
+      transform 110ms cubic-bezier(0.4, 0, 1, 1),
+      display 110ms allow-discrete;
+  }
+
+  /* the reply settles in from the top down, done in about a third of a second */
+  .finder-reply > *,
+  .finder-foot {
+    animation: finder-rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .finder-reply > :nth-child(2) { animation-delay: 40ms; }
+  .finder-reply > :nth-child(3) { animation-delay: 80ms; }
+  .finder-reply > :nth-child(n + 4) { animation-delay: 120ms; }
+  .finder-foot { animation-delay: 140ms; }
+  @keyframes finder-rise {
+    from { opacity: 0; transform: translateY(6px); }
+  }
+
+  /* the button gives under the finger, and dims while a question is out */
+  .finder-go {
+    transition: transform 80ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 120ms linear;
+  }
+  .finder-go:active {
+    transform: scale(0.93);
+  }
+  .finder:has(.finder-status.is-thinking) .finder-go {
+    opacity: 0.45;
+    cursor: progress;
+  }
+  .finder-input:hover {
+    border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+  }
+
+  /* the example requests cross-fade instead of swapping */
+  .finder-input::placeholder {
+    transition: opacity 140ms linear;
+  }
+  .finder-input.is-swapping::placeholder {
+    opacity: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .finder-status.is-thinking::after {
-      content: "...";
+    .finder-panel,
+    .finder-panel[hidden],
+    .finder-go {
+      transition: none;
+    }
+    .finder-reply > *,
+    .finder-foot,
+    .finder-status.is-thinking::before {
       animation: none;
     }
   }
@@ -223,6 +291,9 @@
       left: -1.25rem;
       right: -1.25rem;
       bottom: calc(100% + 0.6rem);
+      /* grows out of the box below it */
+      --finder-from: translateY(6px) scale(0.97);
+      transform-origin: 2rem 100%;
       max-height: min(70dvh, 34rem);
       padding: 0.2rem 1.25rem 1rem;
       overflow-y: auto;
@@ -284,9 +355,18 @@
       return node;
     };
 
+    // `turn` moves on with every question and every close, so an answer to anything
+    // but the latest question is dropped; closing also hangs up on the agent, which
+    // frees the box for the next question at once.
+    let turn = 0;
+    let pending: AbortController | null = null;
+
     function shut() {
+      turn++;
+      pending?.abort();
+      busy = false;
       panel.hidden = true;
-      reply.replaceChildren();
+      // the reply stays put while the panel fades; the next question clears it
       status.textContent = "";
       status.classList.remove("is-thinking");
       input.value = "";
@@ -307,7 +387,7 @@
     // The agent's reply, or null if it can't be had for any reason: no key, rate
     // limit, outage, timeout.
     async function ask(q: string): Promise<{ note: string; areas: string[] } | null> {
-      const abort = new AbortController();
+      const abort = (pending = new AbortController());
       const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
       try {
         const response = await fetch("/api/work", {
@@ -333,15 +413,16 @@
       const q = input.value.trim().slice(0, MAX_QUERY);
       if (busy || q.length < 3) return;
       busy = true;
+      const mine = ++turn;
       reply.replaceChildren();
       foot.hidden = true;
-      status.textContent = "thinking";
+      status.textContent = "Thinking";
       status.classList.add("is-thinking");
       panel.hidden = false;
       const answer = await ask(q);
+      if (mine !== turn) return; // closed, or asked again, while we were looking
       busy = false;
       status.classList.remove("is-thinking");
-      if (panel.hidden) return; // closed while we were looking: leave it closed
 
       if (!answer) {
         const line = el("p", "My agent is not answering right now. ");
@@ -375,7 +456,11 @@
       let hint = 0;
       setInterval(() => {
         if (document.activeElement === input || input.value) return;
-        input.placeholder = HINTS[(hint = (hint + 1) % HINTS.length)];
+        input.classList.add("is-swapping");
+        setTimeout(() => {
+          input.placeholder = HINTS[(hint = (hint + 1) % HINTS.length)];
+          input.classList.remove("is-swapping");
+        }, 140);
       }, 3500);
     }
   }
