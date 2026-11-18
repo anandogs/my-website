@@ -59,7 +59,7 @@ const title = "What Anando Ghose has built | AI agents, finance automation, IoT"
       </p>
 
       <h2>Professional work</h2>
-      <p class="note">Kinds of systems, in general terms. I keep the details for a conversation.</p>
+      <p class="note">Described in general terms. Ask me for details.</p>
       {
         professional.map((w) => (
           <section>
@@ -75,14 +75,13 @@ const title = "What Anando Ghose has built | AI agents, finance automation, IoT"
         career.map((w) => (
           <section>
             <ul>{w.built.map((b) => <li>{b}</li>)}</ul>
-            <p class="tech">Tools: {w.tech.join(", ")}.</p>
           </section>
         ))
       }
 
       <h2>Personal projects</h2>
       <p class="note">
-        My own projects, outside work: for my garden, for myself, for friends and for small local organisations. Several are prototypes.
+        Projects outside work, for myself, friends and small local organisations. Several are prototypes.
       </p>
       {
         personal.map((w) => (

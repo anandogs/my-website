@@ -17,22 +17,22 @@ export const profiles = [
 
 /** One sentence: what to say if you can only say one thing. */
 export const summary =
-  "Anando Ghose builds AI agents, finance and reporting automations and the AI infrastructure they run on, leads developers, and teaches teams to use AI at work. His background is in corporate finance and retail e-commerce.";
+  "Anando Ghose builds AI agents and finance and reporting automation, leads developers, and teaches teams to use AI at work. His background is in corporate finance and retail e-commerce.";
 
 /** Third person, so it can be quoted as it stands. */
 export const bio = [
-  "Anando Ghose builds AI agents, finance and reporting automations, and the AI infrastructure they run on. He leads developers and teaches teams to use AI at work. He is a self-taught programmer who learned through CS50, Harvard's free online course, and he has an MBA from the Indian School of Business.",
-  "Most of his professional work is for finance teams: agents that follow up on unpaid invoices, review expenses or answer revenue questions in chat, reporting packs and board decks that build themselves, and the platforms, guardrails and training that let a team adopt AI safely.",
-  "He came to this from the business side. He started at Fabindia, a craft and lifestyle retail brand, where from 2009 to 2013 he managed the technology side of e-commerce and worked as executive assistant to the managing director. He then spent four years in corporate finance at a global IT services company, in finance integration and financial planning and analysis. Around 2018 he moved into automation, starting with that company's management reporting, and taught himself to program along the way.",
-  "Outside work he plants trees on a farm and builds automated watering for them, makes small apps for himself and websites for friends, and surfs.",
+  "Anando Ghose builds AI agents, automates finance and reporting work, and builds the platforms they run on. He leads developers and teaches teams to use AI. He has worked independently since 2024. He taught himself to program through CS50, Harvard's free online course, and has an MBA from the Indian School of Business.",
+  "Most of his work is for finance teams: agents that chase unpaid invoices, review expenses and answer revenue questions in chat, reporting packs and board decks that build themselves, and the setup and training a team needs to use AI safely.",
+  "He came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where he moved into automation around 2018.",
+  "Outside work he plants trees on a farm and builds automatic watering for them. He also makes small apps for himself and websites for friends, and he surfs.",
 ];
 
 /** The same, in his own voice, for the work page and its Markdown twin. */
 export const bioFirst = [
-  "I build AI agents, finance and reporting automations, and the AI infrastructure they run on. I lead developers and teach teams to use AI at work. I am a self-taught programmer who learned through CS50, Harvard's free online course, and I have an MBA from the Indian School of Business.",
-  "Most of my professional work is for finance teams: agents that follow up on unpaid invoices, review expenses or answer revenue questions in chat, reporting packs and board decks that build themselves, and the platforms, guardrails and training that let a team adopt AI safely.",
-  "I came to this from the business side. I started at Fabindia, a craft and lifestyle retail brand, where from 2009 to 2013 I managed the technology side of e-commerce and worked as executive assistant to the managing director. I then spent four years in corporate finance at a global IT services company, in finance integration and financial planning and analysis. Around 2018 I moved into automation, starting with that company's management reporting, and taught myself to program along the way.",
-  "Outside work I plant trees on a farm and build automated watering for them, make small apps for myself and websites for friends, and surf.",
+  "I build AI agents, automate finance and reporting work, and build the platforms they run on. I lead developers and teach teams to use AI. I have worked independently since 2024. I taught myself to program through CS50, Harvard's free online course, and I have an MBA from the Indian School of Business.",
+  "Most of my work is for finance teams: agents that chase unpaid invoices, review expenses and answer revenue questions in chat, reporting packs and board decks that build themselves, and the setup and training a team needs to use AI safely.",
+  "I came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where I moved into automation around 2018.",
+  "Outside work I plant trees on a farm and build automatic watering for them. I also make small apps for myself and websites for friends, and I surf.",
 ];
 
 const professional = work.filter((w) => !w.personal && !w.career);
@@ -55,17 +55,17 @@ Last updated: ${updated}. Contact: ${EMAIL}. Website: ${SITE}/
 
 ## Professional work
 
-Kinds of systems, described in general terms. I keep the details for a conversation.
+Described in general terms. Ask me for details.
 
 ${section(professional)}
 
 ## Earlier career
 
-${career.map((w) => `${w.built.map((b) => `- ${b}`).join("\n")}\n\nTools: ${w.tech.join(", ")}.`).join("\n\n")}
+${career.map((w) => w.built.map((b) => `- ${b}`).join("\n")).join("\n\n")}
 
 ## Personal projects
 
-My own projects, outside work: for my garden, for myself, for friends and for small local organisations. Several are prototypes.
+Projects outside work, for myself, friends and small local organisations. Several are prototypes.
 
 ${section(personal)}
 
@@ -82,7 +82,7 @@ ${bio[0]} Facts here are current as of ${updated}. To get in touch, email ${EMAI
 
 ## Work
 
-- [What I have built](${SITE}/work.md): every area of work with what was built and the technology used, professional and personal
+- [What he has built](${SITE}/work.md): every area of work with what was built and the technology used, professional and personal
 - [Everything in one file](${SITE}/llms-full.txt): the bio and the full work list as a single Markdown document
 
 ## About

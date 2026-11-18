@@ -1,8 +1,8 @@
 ---
 // "What are you looking for?" — a visitor describes a problem and gets a short
 // written reply about similar things Anando has built. /api/work writes it from
-// a server-only work log; nothing from that log is ever shipped to the browser,
-// so there is no list here to browse. Needs JS, so it stays hidden without it.
+// the same work list that is published at /work. Needs JS, so it stays hidden
+// without it.
 //
 // Lives in the page's left column on desktop, where the reply opens as a card
 // above the box; on phones it sits below the stage and simply grows.
@@ -20,7 +20,7 @@
         maxlength="300"
         autocomplete="off"
         enterkeyhint="search"
-        placeholder="an agent that reads invoices"
+        placeholder="an agent that chases unpaid invoices"
       />
       <button class="finder-go" type="submit" aria-label="Ask">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -37,7 +37,7 @@
     </div>
     <div class="finder-reply" data-finder-reply tabindex="-1"></div>
     <p class="finder-foot" data-finder-foot hidden>
-      Answered by my agent, from my work log.
+      Answered by my agent, from <a href="/work/">my work page</a>.
       <a href="mailto:me@anandoghose.com?subject=Your%20work">Email me about this</a>
     </p>
   </div>
@@ -318,7 +318,7 @@
 
 <script>
   const HINTS = [
-    "an agent that reads invoices",
+    "an agent that chases unpaid invoices",
     "reports that build themselves",
     "a Teams bot for finance questions",
     "getting a team started with AI",

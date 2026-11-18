@@ -1,12 +1,15 @@
 // What Anando has built, at the level he is happy to say in public: kinds of
 // systems, not how any one of them works. The "What are you looking for?" agent
 // answers from it, and it is published as it stands at /work, /work.md and
-// /llms-full.txt. So keep it general: no organisation, product or people names (Fabindia, a past employer, is the one exception),
+// /llms-full.txt. So keep it general: no people or product names, and no organisation names except the past employers and
+// projects he lists on his public LinkedIn profile, named in the career and personal areas. Never
+// say who any system in the professional areas was built for,
 // no process detail, no figures. Anything written here is public.
 // Prototypes and experiments are labelled as such; anything unlabelled is in real use.
 export interface Capability {
   area: string;
   built: string[];
+  /** May be empty, and is then not shown. */
   tech: string[];
   /** His own projects, outside work. The agent may say so, and may say who one was
    *  for in the words used here (a friend, a farm), still without naming anyone. */
@@ -19,11 +22,11 @@ export const work: Capability[] = [
   {
     area: "Finance operations automation",
     built: [
-      "A collections platform with dashboards and AI agents that help a finance team follow up on unpaid invoices (built as part of a team)",
-      "Agents that draft customer emails for a person to review, and that sort incoming replies",
-      "Agents that turn meeting and call transcripts into structured follow-up records",
+      "A collections platform with dashboards and AI agents that help a finance team follow up on unpaid invoices (built with a team)",
+      "Agents that sort incoming replies and draft customer emails for a person to review",
+      "Agents that turn meeting and call transcripts into follow-up records",
       "Browser and document automation for timesheets and invoicing",
-      "An expense review platform that reads claims and receipts with document AI and checks them against policy with an LLM workflow, with a person approving",
+      "An expense review platform that reads claims and receipts with document AI, checks them against policy with an LLM workflow and leaves approval to a person",
     ],
     tech: ["Next.js", "React", "TypeScript", "Python", "FastAPI", "LangGraph", "Azure OpenAI", "Azure Document Intelligence", "Playwright", "Microsoft Graph"],
   },
@@ -32,7 +35,7 @@ export const work: Capability[] = [
     built: [
       "Chat agents inside Teams and other workplace chat tools that answer revenue and KPI questions in plain language, with the arithmetic done by code rather than by the model",
       "An analysis web app where the model builds tables on demand next to the conversation",
-      "A guardrailed question-and-answer assistant that answers only from approved material and declines everything else",
+      "An assistant that answers only from approved material and declines everything else",
       "MCP servers that expose analysis tools to any compatible agent",
     ],
     tech: ["Python", "LangGraph", "LangChain", "Azure OpenAI", "Gemini", "Vertex AI", "MCP", "FastAPI", "Streamlit", "Bot Framework", "Cloud Run"],
@@ -40,8 +43,8 @@ export const work: Capability[] = [
   {
     area: "Reporting automation",
     built: [
-      "Generators that build management and board decks straight from workbooks, with automated checks of every slide against the source data",
-      "Pipelines that produce recurring multi-sheet Excel reporting packs",
+      "Generators that build management and board decks straight from workbooks and check every slide against the source data",
+      "Pipelines that produce recurring reporting packs in multi-sheet Excel",
       "Weekly cost and margin packs assembled from APIs instead of by hand",
       "Power BI reports, tabular models and DAX measures",
     ],
@@ -50,19 +53,19 @@ export const work: Capability[] = [
   {
     area: "Workforce and cost analytics",
     built: [
-      "A staffing KPI dashboard with role-based data upload",
+      "A staffing KPI dashboard with data uploads controlled by role",
       "Pipelines for headcount, compensation and people-cost forecasting",
-      "A simulator for the cost and margin impact of policy changes",
+      "A simulator that shows how policy changes affect cost and margin",
     ],
     tech: ["Next.js", "TypeScript", "Python", "pandas", "Flask", "Google Cloud Storage", "Power BI"],
   },
   {
-    area: "AI platform and team enablement",
+    area: "AI platform and training",
     built: [
-      "An internal catalog where teams find and install agents, skills and MCP servers",
-      "An MCP server registry and server templates with sign-in and container deployment",
-      "Reusable skills for coding agents, such as masking data before a model sees it, pulling ERP and HR data, building slide decks and drafting mail",
-      "A platform where business users run their own scripts and an agent explains and repairs failures, behind a code-safety check",
+      "An internal catalogue where teams find and install agents, skills and MCP servers",
+      "A registry of MCP servers, plus server templates with sign-in and container deployment",
+      "Reusable skills for coding agents, such as masking data before a model sees it, pulling ERP and HR data, building slide decks and drafting email",
+      "A platform where business users run their own scripts behind a code-safety check, and an agent explains and repairs failures",
       "Cloud cost guardrails and budget alerts for AI workloads",
       "A security review of internet-facing apps, run with a coding agent",
       "A self-hosted deployment of an open-source agent with a chat gateway",
@@ -71,12 +74,12 @@ export const work: Capability[] = [
     tech: ["MCP", "Python", "FastAPI", "Azure Functions", "Azure Container Apps", "Azure AI Foundry", "Vertex AI", "Docker", "Bicep", "PowerShell"],
   },
   {
-    area: "Program and project management",
+    area: "Programme and project management",
     built: [
-      "Running a finance AI program: use cases, stand-ups, commitments and follow-ups, with tooling built to keep track of it",
+      "Running a finance AI programme, with tooling I built to track its use cases, commitments and follow-ups",
       "Planning and tracking tools for a team of developers",
-      "Assessing a backlog of proposed AI agents to separate true agents from ordinary automation",
-      "Functional specifications, process maps and delivery boards for planned agents",
+      "Sorting a backlog of proposed AI agents into true agents and ordinary automation",
+      "Specifications, process maps and delivery boards for planned agents",
     ],
     tech: ["Python", "Flask", "Azure DevOps", "BPMN", "Power Automate"],
   },
@@ -84,38 +87,38 @@ export const work: Capability[] = [
     area: "Data engineering",
     built: [
       "Pipelines that turn large Excel workbooks into validated, queryable datasets with historical snapshots",
-      "Extraction from a cloud data warehouse and Spark",
-      "Self-serve tools that let finance users define and run their own data consolidation without code",
+      "Data extraction from a cloud data warehouse and from Spark",
+      "No-code tools that let finance users define and run their own data consolidation",
     ],
     tech: ["Python", "pandas", "Parquet", "SQL", "PySpark", "Databricks", "Apps Script", "React"],
   },
   {
-    area: "Earlier career in finance and retail",
-    career: true,
-    built: [
-      "Fabindia, a craft and lifestyle retail brand (2009 to 2013): managed the technology side of its e-commerce, which included helping set up the engagement that built the mobile site, selling through online marketplaces and automating spreadsheet work; also executive assistant to the managing director",
-      "A global IT services company: four years in corporate finance, bringing an acquired company's financial data into the parent's systems, shortening purchase-to-pay and order-to-cash cycles and working in financial planning and analysis; then, from around 2018, automating its management reporting",
-      "A craft social enterprise (2019 to 2021): ran its online store, payments, shipping and operating procedures",
-      "An early-stage startup: tech lead and full-stack engineer",
-    ],
-    tech: ["Excel", "Power BI", "Power Query", "Python", "Shopify"],
-  },
-  {
     area: "Small tools",
     built: [
-      "Local meeting transcription and summaries that keep recordings off external services",
+      "Meeting transcription and summaries that run on my own machine, keeping recordings off external services",
       "A process chart viewer and a calendar sync utility",
-      "Prototypes: a rate prediction model and a knowledge graph of operating procedures",
+      "A rate prediction model and a knowledge graph of operating procedures (prototypes)",
     ],
     tech: ["Python", "Whisper", "Svelte", "scikit-learn", "Neo4j"],
+  },
+  {
+    area: "Earlier career",
+    career: true,
+    built: [
+      "Fabindia, a craft and lifestyle retail brand (2009 to 2013): managed the technology side of its e-commerce, helped set up the project that built the mobile site, sold through online marketplaces and automated spreadsheet work; also executive assistant to the managing director",
+      "Virtusa, a global IT services company (2014 to 2023, the later years on contract): four years in corporate finance, where I brought an acquired company's financial data into the parent's systems, shortened purchase-to-pay and order-to-cash cycles and worked in financial planning and analysis; from around 2018, automated its management reporting",
+      "Rangsutra Crafts, a craft social enterprise (2019 to 2021): ran its online store, payments, shipping and operating procedures",
+      "Yuvabe (2022 to 2024): worked as tech lead and full-stack engineer for an early-stage startup",
+    ],
+    tech: [],
   },
   {
     area: "IoT and home automation",
     personal: true,
     built: [
-      "A plant-watering valve on a microcontroller that opens when it gets a message over the home network and shuts itself off after a set time (my own garden, prototype)",
-      "Soil-moisture sensing on a microcontroller: reading the sensors, calibrating them, and bench-testing a servo (experiments)",
-      "A phone lockbox guarded by an AI assistant, which asks for a reason before unlocking and keeps a log of every time (prototype)",
+      "A microcontroller watering valve for my trees that opens on a message over the network and shuts itself off after a set time (prototype)",
+      "Experiments in soil-moisture sensing on a microcontroller: reading and calibrating the sensors and bench-testing a servo",
+      "A phone lockbox guarded by an AI assistant that asks for a reason before unlocking and logs every unlock (prototype)",
     ],
     tech: ["ESP8266", "NodeMCU", "Arduino", "MicroPython", "MQTT", "MCP", "Python", "SQLite"],
   },
@@ -124,10 +127,10 @@ export const work: Capability[] = [
     personal: true,
     built: [
       "An interactive 3D map of a farm, built from a land survey, where you can walk around and tap a tree to see what it is",
-      "The website of an organic farm, rebuilt several times over the years",
+      "An organic farm's website, rebuilt several times over the years",
       "A registration and produce-sales app for farmers (prototype)",
-      "A question-answering agent about government schemes that replies in Indian languages, from a knowledge base and web search (prototype)",
-      "An introduction-to-AI session for Tamil-speaking facilitators, with a voice translator app between English and Tamil",
+      "An agent that answers questions about government schemes in Indian languages, drawing on a knowledge base and web search (prototype)",
+      "An introductory AI session for Tamil-speaking facilitators, with an English-Tamil voice translator app",
       "A calculator that turns a carbon figure into everyday equivalents (prototype)",
     ],
     tech: ["three.js", "Next.js", "Astro", "React", "Django", "FastAPI", "LangGraph", "Flutter"],
@@ -136,9 +139,9 @@ export const work: Capability[] = [
     area: "Personal apps",
     personal: true,
     built: [
-      "A buy-in tracker for home poker games that works out who pays whom at the end of the night (used with friends)",
+      "A buy-in tracker for home poker games that works out who pays whom at the end of the night",
       "A daily habit tracker with streaks",
-      "A pipeline that takes heart-rate variability and sleep data from my phone into a database, which an AI coach reads to write my weekly training plans",
+      "A pipeline that moves heart-rate variability and sleep data from my phone into a database, where an AI coach reads it to write my weekly training plans",
       "A goal tracker that checks tasks against the time actually logged",
       "A command-line tool that helps a group of friends agree on a movie",
     ],
@@ -148,10 +151,10 @@ export const work: Capability[] = [
     area: "Websites for friends and small organisations",
     personal: true,
     built: [
-      "Websites for a surf school, a theatre artist, a yoga teacher, an adventure-travel group and an impact-measurement consultancy",
-      "An RSVP site for a friend's wedding",
-      "An impact page on a craft social enterprise's online store",
-      "A booking app and travel site for a bike-rental startup (prototype)",
+      "Websites for a surf school, a theatre artist, a yoga teacher, Breakneck (an adventure-travel group) and an impact-measurement consultancy",
+      "The RSVP site for my own wedding",
+      "An impact page on the Rangsutra Crafts online store",
+      "LeMiRide and LeMiWander, a booking app and a travel site for a bike-rental and travel startup (prototypes)",
       "A stock-management app and store scripts for a small retail business",
     ],
     tech: ["Astro", "Svelte", "Gatsby", "Next.js", "Vue", "Contentful", "Shopify", "Django", "Flutter"],
