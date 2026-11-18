@@ -3,6 +3,7 @@
 // answers from it, and it is published as it stands at /work, /work.md and
 // /llms-full.txt. So keep it general: no organisation, product or people names (Fabindia, a past employer, is the one exception),
 // no process detail, no figures. Anything written here is public.
+// Prototypes and experiments are labelled as such; anything unlabelled is in real use.
 export interface Capability {
   area: string;
   built: string[];
@@ -18,7 +19,7 @@ export const work: Capability[] = [
   {
     area: "Finance operations automation",
     built: [
-      "A collections platform with dashboards and AI agents that help a finance team follow up on unpaid invoices (deployed, built as part of a team)",
+      "A collections platform with dashboards and AI agents that help a finance team follow up on unpaid invoices (built as part of a team)",
       "Agents that draft customer emails for a person to review, and that sort incoming replies",
       "Agents that turn meeting and call transcripts into structured follow-up records",
       "Browser and document automation for timesheets and invoicing",
@@ -58,11 +59,11 @@ export const work: Capability[] = [
   {
     area: "AI platform and team enablement",
     built: [
-      "An internal catalog where teams find and install agents, skills and MCP servers (deployed)",
+      "An internal catalog where teams find and install agents, skills and MCP servers",
       "An MCP server registry and server templates with sign-in and container deployment",
       "Reusable skills for coding agents, such as masking data before a model sees it, pulling ERP and HR data, building slide decks and drafting mail",
       "A platform where business users run their own scripts and an agent explains and repairs failures, behind a code-safety check",
-      "Cloud cost guardrails and budget alerts for AI workloads (deployed)",
+      "Cloud cost guardrails and budget alerts for AI workloads",
       "A security review of internet-facing apps, run with a coding agent",
       "A self-hosted deployment of an open-source agent with a chat gateway",
       "Handbooks and setup guides for teams adopting AI models and coding agents",
@@ -122,7 +123,7 @@ export const work: Capability[] = [
     area: "Farm and community projects",
     personal: true,
     built: [
-      "An interactive 3D map of a farm, built from a land survey, where you can walk around and tap a tree to see what it is (deployed)",
+      "An interactive 3D map of a farm, built from a land survey, where you can walk around and tap a tree to see what it is",
       "The website of an organic farm, rebuilt several times over the years",
       "A registration and produce-sales app for farmers (prototype)",
       "A question-answering agent about government schemes that replies in Indian languages, from a knowledge base and web search (prototype)",
@@ -135,9 +136,9 @@ export const work: Capability[] = [
     area: "Personal apps",
     personal: true,
     built: [
-      "A buy-in tracker for home poker games that works out who pays whom at the end of the night (deployed, used with friends)",
-      "A daily habit tracker with streaks (deployed)",
-      "A pipeline that takes heart-rate variability and sleep data from my phone into a database, which an AI coach reads to write my weekly training plans (in use)",
+      "A buy-in tracker for home poker games that works out who pays whom at the end of the night (used with friends)",
+      "A daily habit tracker with streaks",
+      "A pipeline that takes heart-rate variability and sleep data from my phone into a database, which an AI coach reads to write my weekly training plans",
       "A goal tracker that checks tasks against the time actually logged",
       "A command-line tool that helps a group of friends agree on a movie",
     ],
@@ -147,9 +148,9 @@ export const work: Capability[] = [
     area: "Websites for friends and small organisations",
     personal: true,
     built: [
-      "Websites for a surf school, a theatre artist, a yoga teacher, an adventure-travel group and an impact-measurement consultancy (deployed)",
+      "Websites for a surf school, a theatre artist, a yoga teacher, an adventure-travel group and an impact-measurement consultancy",
       "An RSVP site for a friend's wedding",
-      "An impact page on a craft social enterprise's online store (deployed)",
+      "An impact page on a craft social enterprise's online store",
       "A booking app and travel site for a bike-rental startup (prototype)",
       "A stock-management app and store scripts for a small retail business",
     ],
