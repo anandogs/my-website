@@ -160,6 +160,31 @@ import { scenes } from "../data/scenes";
     border-radius: 3px;
   }
 
+  /* Phones: the stage sits under the copy and is narrow, so the bars run its full
+     width along the top edge, where they clear the wall clock and read as progress. */
+  @media (max-width: 820px) {
+    .day {
+      top: 0.3rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      width: auto;
+      gap: 0.35rem;
+      transform: none;
+    }
+    .day-track {
+      height: 4px;
+    }
+    .day-fill {
+      background: color-mix(in srgb, currentColor 62%, transparent);
+    }
+    .day-part.is-now .day-fill {
+      background: color-mix(in srgb, currentColor 82%, transparent);
+    }
+    .day-part.is-now .day-name {
+      opacity: 0.85;
+    }
+  }
+
   .hint {
     position: absolute;
     left: 0;
