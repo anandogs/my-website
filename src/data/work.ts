@@ -106,7 +106,7 @@ export const work: Capability[] = [
     career: true,
     built: [
       "Fabindia, a craft and lifestyle retail brand (2009 to 2013): managed the technology side of its e-commerce, helped set up the project that built the mobile site, sold through online marketplaces and automated spreadsheet work; also executive assistant to the managing director",
-      "Virtusa, a global IT services company (2014 to 2023, the later years on contract): four years in corporate finance, where I brought an acquired company's financial data into the parent's systems, shortened purchase-to-pay and order-to-cash cycles and worked in financial planning and analysis; from around 2018, automated its management reporting",
+      "Virtusa, a global IT services company (2014 to 2023): in corporate finance until 2019, where I brought an acquired company's financial data into the parent's systems, shortened purchase-to-pay and order-to-cash cycles and worked in financial planning and analysis; from 2019, as an independent contractor, automated its management reporting",
       "Rangsutra Crafts, a craft social enterprise (2019 to 2021): ran its online store, payments, shipping and operating procedures",
       "Yuvabe (2022 to 2024): worked as tech lead and full-stack engineer for an early-stage startup",
     ],

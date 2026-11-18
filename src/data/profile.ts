@@ -21,17 +21,17 @@ export const summary =
 
 /** Third person, so it can be quoted as it stands. */
 export const bio = [
-  "Anando Ghose builds AI agents, automates finance and reporting work, and builds the platforms they run on. He leads developers and teaches teams to use AI. He has worked independently since 2024. He taught himself to program through CS50, Harvard's free online course, and has an MBA from the Indian School of Business.",
+  "Anando Ghose builds AI agents, automates finance and reporting work, and builds the platforms they run on. He leads developers and teaches teams to use AI. He has worked as an independent contractor since 2019. He taught himself to program through CS50, Harvard's free online course, and has an MBA from the Indian School of Business.",
   "Most of his work is for finance teams: agents that chase unpaid invoices, review expenses and answer revenue questions in chat, reporting packs and board decks that build themselves, and the setup and training a team needs to use AI safely.",
-  "He came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where he moved into automation around 2018.",
+  "He came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where he moved into automation in 2019.",
   "Outside work he plants trees on a farm and builds automatic watering for them. He also makes small apps for himself and websites for friends, and he surfs.",
 ];
 
 /** The same, in his own voice, for the work page and its Markdown twin. */
 export const bioFirst = [
-  "I build AI agents, automate finance and reporting work, and build the platforms they run on. I lead developers and teach teams to use AI. I have worked independently since 2024. I taught myself to program through CS50, Harvard's free online course, and I have an MBA from the Indian School of Business.",
+  "I build AI agents, automate finance and reporting work, and build the platforms they run on. I lead developers and teach teams to use AI. I have worked as an independent contractor since 2019. I taught myself to program through CS50, Harvard's free online course, and I have an MBA from the Indian School of Business.",
   "Most of my work is for finance teams: agents that chase unpaid invoices, review expenses and answer revenue questions in chat, reporting packs and board decks that build themselves, and the setup and training a team needs to use AI safely.",
-  "I came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where I moved into automation around 2018.",
+  "I came to this from the business side: e-commerce at Fabindia, then corporate finance at Virtusa, where I moved into automation in 2019.",
   "Outside work I plant trees on a farm and build automatic watering for them. I also make small apps for myself and websites for friends, and I surf.",
 ];
 
