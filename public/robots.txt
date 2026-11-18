@@ -1,0 +1,8 @@
+# Everything here is meant to be read, by people and by machines, including
+# AI crawlers and assistants (search, user-requested fetches and training).
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /random1
+
+Sitemap: https://www.anandoghose.com/sitemap-index.xml

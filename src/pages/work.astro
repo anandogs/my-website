@@ -1,0 +1,192 @@
+---
+// What Anando has built, as a page: plain prose and lists with no script, so
+// search engines and AI crawlers (most of which do not run JavaScript) read all of
+// it. The same text is served as Markdown at /work.md and listed in /llms.txt.
+import { work } from "../data/work";
+import { SITE, EMAIL, bio, summary, profiles } from "../data/profile";
+
+const updated = new Date().toISOString().slice(0, 10);
+const professional = work.filter((w) => !w.personal);
+const personal = work.filter((w) => w.personal);
+const title = "What Anando Ghose has built | AI agents, finance automation, IoT";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={summary} />
+    <meta name="author" content="Anando Ghose" />
+    <link rel="canonical" href={`${SITE}/work/`} />
+    <link rel="alternate" type="text/markdown" href={`${SITE}/work.md`} title="This page as Markdown" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content={`${SITE}/work/`} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={summary} />
+    <meta property="og:image" content={`${SITE}/og.jpg`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": `${SITE}/work#webpage`,
+        url: `${SITE}/work/`,
+        name: title,
+        description: summary,
+        dateModified: updated,
+        isPartOf: { "@id": `${SITE}/#website` },
+        about: { "@id": `${SITE}/#person` },
+        author: { "@id": `${SITE}/#person` },
+      })}
+    />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow"><a href="/">Anando Ghose</a></p>
+      <h1>What I have built</h1>
+      {bio.map((p) => <p class="bio">{p}</p>)}
+      <p class="meta">
+        Updated <time datetime={updated}>{updated}</time> · <a href={`mailto:${EMAIL}`}>{EMAIL}</a> ·
+        <a href="/work.md">this page as Markdown</a>
+      </p>
+
+      <h2>Professional work</h2>
+      <p class="note">Kinds of systems, in general terms. I keep the details for a conversation.</p>
+      {
+        professional.map((w) => (
+          <section>
+            <h3>{w.area}</h3>
+            <ul>{w.built.map((b) => <li>{b}</li>)}</ul>
+            <p class="tech">Technology: {w.tech.join(", ")}.</p>
+          </section>
+        ))
+      }
+
+      <h2>Personal projects</h2>
+      <p class="note">
+        My own projects, outside work: for my garden, for myself, for friends and for small local organisations. Several are prototypes.
+      </p>
+      {
+        personal.map((w) => (
+          <section>
+            <h3>{w.area}</h3>
+            <ul>{w.built.map((b) => <li>{b}</li>)}</ul>
+            <p class="tech">Technology: {w.tech.join(", ")}.</p>
+          </section>
+        ))
+      }
+
+      <h2>Elsewhere</h2>
+      <ul class="links">
+        {profiles.map((p) => <li><a href={p.href} rel="me noopener">{p.label}</a></li>)}
+      </ul>
+    </main>
+
+    <style>
+      :root {
+        --paper: #f1e7d6;
+        --ink: #2b1c12;
+        --ink-soft: #6a5443;
+        --accent: #b23026;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        line-height: 1.6;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 3.5rem 1.25rem 5rem;
+      }
+      .eyebrow {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .eyebrow a {
+        color: var(--ink-soft);
+        text-decoration: none;
+      }
+      h1 {
+        margin: 0.4rem 0 1.25rem;
+        font-size: clamp(2.2rem, 6vw, 3.2rem);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+      .bio + .bio {
+        margin-top: 0.8em;
+      }
+      .meta,
+      .note,
+      .tech {
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+      .meta {
+        margin-top: 1.25rem;
+      }
+      h2 {
+        margin-top: 3rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+        font-size: 1.5rem;
+        font-weight: 800;
+      }
+      h3 {
+        margin-top: 1.9rem;
+        font-size: 1.08rem;
+        font-weight: 600;
+      }
+      ul {
+        margin-top: 0.5rem;
+        padding-left: 1.15rem;
+      }
+      li + li {
+        margin-top: 0.3rem;
+      }
+      .tech {
+        margin-top: 0.6rem;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 1.25rem;
+        padding: 0;
+        list-style: none;
+      }
+      .links li {
+        margin: 0;
+      }
+      a {
+        color: var(--ink);
+        font-weight: 600;
+        text-decoration: underline;
+        text-decoration-color: var(--accent);
+        text-underline-offset: 0.22em;
+      }
+      a:hover {
+        color: var(--accent);
+      }
+      a:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+    </style>
+  </body>
+</html>

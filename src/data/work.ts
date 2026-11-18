@@ -1,7 +1,8 @@
 // What Anando has built, at the level he is happy to say in public: kinds of
-// systems, not how any one of them works. Server-only — the "What are you looking
-// for?" endpoint reads it; nothing here is sent to the browser. Keep it general:
-// no organisation, product or people names, no process detail, no figures.
+// systems, not how any one of them works. The "What are you looking for?" agent
+// answers from it, and it is published as it stands at /work, /work.md and
+// /llms-full.txt. So keep it general: no organisation, product or people names,
+// no process detail, no figures. Anything written here is public.
 export interface Capability {
   area: string;
   built: string[];

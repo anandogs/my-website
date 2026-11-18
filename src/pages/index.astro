@@ -5,6 +5,7 @@ import Character3D from "../components/Character3D.astro";
 import WorkFinder from "../components/WorkFinder.astro";
 import { copy, tagline } from "../data/copy";
 import { scenes } from "../data/scenes";
+import { SITE, EMAIL, bio, profiles } from "../data/profile";
 
 const links = [
   { label: "Substack", href: "https://substack.com/@anandoghose", aria: "Follow me on Substack" },
@@ -14,6 +15,36 @@ const links = [
   { label: "Instagram", href: "https://www.instagram.com/anandoghose/", aria: "Follow me on Instagram" },
   { label: "YouTube", href: "https://www.youtube.com/@anandogs", aria: "Subscribe to my YouTube channel" },
 ];
+
+// Who this site is about, for search engines: one person, this page is his profile.
+const graph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebSite", "@id": `${SITE}/#website`, url: `${SITE}/`, name: "Anando Ghose", publisher: { "@id": `${SITE}/#person` } },
+    {
+      "@type": "ProfilePage",
+      "@id": `${SITE}/#profilepage`,
+      url: `${SITE}/`,
+      isPartOf: { "@id": `${SITE}/#website` },
+      dateModified: new Date().toISOString().slice(0, 10),
+      mainEntity: { "@id": `${SITE}/#person` },
+    },
+    {
+      "@type": "Person",
+      "@id": `${SITE}/#person`,
+      name: "Anando Ghose",
+      alternateName: "anandogs",
+      url: `${SITE}/`,
+      email: EMAIL,
+      jobTitle: "Automation and AI Agent Builder",
+      description: bio[0],
+      alumniOf: [{ "@type": "CollegeOrUniversity", name: "Indian School of Business", sameAs: "https://www.isb.edu/" }],
+      knowsAbout: ["AI agents", "LangGraph", "AI infrastructure", "Finance automation", "Reporting automation", "Analytics", "AI training for teams", "Project management", "IoT for farming"],
+      subjectOf: { "@id": `${SITE}/work#webpage` },
+      sameAs: [...profiles.map((p) => p.href), "https://www.youtube.com/channel/UCb8LzmczkHjCz0Bhvgg-QjA"],
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -28,12 +59,8 @@ const links = [
       content="Anando Ghose builds AI agents with LangGraph, AI infrastructure and reporting automations, manages developers, and teaches teams to use AI at work."
     />
     <meta name="author" content="Anando Ghose" />
-    <meta
-      name="keywords"
-      content="Anando Ghose, finance automation, analytics, web development, self-taught programmer, CS50, MBA, Indian School of Business"
-    />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://anandoghose.com/" />
+    <meta property="og:url" content="https://www.anandoghose.com/" />
     <meta
       property="og:title"
       content="Anando Ghose | AI agents, automations, AI training"
@@ -44,23 +71,24 @@ const links = [
     />
     <meta
       property="og:image"
-      content="https://anandoghose.com/profile-image.jpg"
+      content="https://www.anandoghose.com/og.jpg"
     />
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://anandoghose.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://www.anandoghose.com/" />
     <meta
-      property="twitter:title"
+      name="twitter:title"
       content="Anando Ghose | AI agents, automations, AI training"
     />
     <meta
-      property="twitter:description"
+      name="twitter:description"
       content="Anando Ghose builds AI agents with LangGraph, AI infrastructure and reporting automations, manages developers, and teaches teams to use AI at work."
     />
     <meta
-      property="twitter:image"
-      content="https://anandoghose.com/profile-image.jpg"
+      name="twitter:image"
+      content="https://www.anandoghose.com/og.jpg"
     />
-    <link rel="canonical" href="https://anandoghose.com" />
+    <link rel="canonical" href="https://www.anandoghose.com/" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
 
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="shortcut icon" href="/favicon.png" type="image/png" />
@@ -73,49 +101,7 @@ const links = [
       rel="stylesheet"
     />
 
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "name": "Anando Ghose",
-        "url": "https://anandoghose.com",
-        "email": "me@anandoghose.com",
-        "jobTitle": "Automation and AI Agent Builder",
-        "description": "Builds AI agents with LangGraph, AI infrastructure, and reporting and analytics automations. Manages developers and teaches teams to use AI at work. Self-taught programmer (Harvard CS50) with an MBA from the Indian School of Business.",
-        "alumniOf": [
-          {
-            "@type": "CollegeOrUniversity",
-            "name": "Indian School of Business",
-            "sameAs": "https://www.isb.edu/"
-          },
-          {
-            "@type": "EducationalOrganization",
-            "name": "Harvard University CS50",
-            "sameAs": "https://cs50.harvard.edu/"
-          }
-        ],
-        "knowsAbout": [
-          "AI Agents",
-          "LangGraph",
-          "AI Infrastructure",
-          "Reporting Automation",
-          "Finance Automation",
-          "Analytics",
-          "AI Training",
-          "Project Management",
-          "IoT for Farming",
-          "Programming"
-        ],
-        "sameAs": [
-          "https://www.linkedin.com/in/anandoghose/",
-          "https://github.com/anandogs",
-          "https://www.instagram.com/anandoghose/",
-          "https://www.youtube.com/channel/UCb8LzmczkHjCz0Bhvgg-QjA",
-          "https://substack.com/@anandoghose",
-          "https://medium.com/@anandoghose"
-        ]
-      }
-    </script>
+    <script type="application/ld+json" set:html={JSON.stringify(graph)} />
   </head>
   <body>
     <div class="page">
@@ -145,6 +131,7 @@ const links = [
         <a href="mailto:me@anandoghose.com" class="email" id="copy-email">Email me</a>
 
         <ul class="links">
+          <li><a href="/work">My work</a></li>
           {
             links.map((l) => (
               <li>
