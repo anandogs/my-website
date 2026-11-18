@@ -6,7 +6,8 @@ import { work } from "../data/work";
 import { SITE, EMAIL, bioFirst, summary, profiles } from "../data/profile";
 
 const updated = new Date().toISOString().slice(0, 10);
-const professional = work.filter((w) => !w.personal);
+const professional = work.filter((w) => !w.personal && !w.career);
+const career = work.filter((w) => w.career);
 const personal = work.filter((w) => w.personal);
 const title = "What Anando Ghose has built | AI agents, finance automation, IoT";
 ---
@@ -65,6 +66,16 @@ const title = "What Anando Ghose has built | AI agents, finance automation, IoT"
             <h3>{w.area}</h3>
             <ul>{w.built.map((b) => <li>{b}</li>)}</ul>
             <p class="tech">Technology: {w.tech.join(", ")}.</p>
+          </section>
+        ))
+      }
+
+      <h2>Earlier career</h2>
+      {
+        career.map((w) => (
+          <section>
+            <ul>{w.built.map((b) => <li>{b}</li>)}</ul>
+            <p class="tech">Tools: {w.tech.join(", ")}.</p>
           </section>
         ))
       }

@@ -10,6 +10,8 @@ export interface Capability {
   /** His own projects, outside work. The agent may say so, and may say who one was
    *  for in the words used here (a friend, a farm), still without naming anyone. */
   personal?: boolean;
+  /** Where he has worked rather than what he has built: shown as its own section. */
+  career?: boolean;
 }
 
 export const work: Capability[] = [
@@ -88,11 +90,12 @@ export const work: Capability[] = [
   },
   {
     area: "Earlier career in finance and retail",
+    career: true,
     built: [
-      "Four years at Fabindia, a craft and lifestyle retail brand (2009 to 2013): managing the technology side of its e-commerce, which included setting up the engagement that built the mobile site, selling through online marketplaces and spreadsheet automation, and working as executive assistant to the managing director. I did not run the online business itself",
-      "About ten years in the finance function of a global IT services company: bringing an acquired company's financial data into the parent's systems, shortening purchase-to-pay and order-to-cash cycles, financial planning and analysis, and management reporting",
-      "Running the online store, payments, shipping and operating procedures for a craft social enterprise (2019 to 2021)",
-      "Tech lead and full-stack engineer for an early-stage startup",
+      "Fabindia, a craft and lifestyle retail brand (2009 to 2013): managed the technology side of its e-commerce, which included helping set up the engagement that built the mobile site, selling through online marketplaces and automating spreadsheet work; also executive assistant to the managing director",
+      "A global IT services company: four years in corporate finance, bringing an acquired company's financial data into the parent's systems, shortening purchase-to-pay and order-to-cash cycles and working in financial planning and analysis; then, from around 2018, automating its management reporting",
+      "A craft social enterprise (2019 to 2021): ran its online store, payments, shipping and operating procedures",
+      "An early-stage startup: tech lead and full-stack engineer",
     ],
     tech: ["Excel", "Power BI", "Power Query", "Python", "Shopify"],
   },
