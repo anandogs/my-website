@@ -1,7 +1,7 @@
 // What Anando has built, at the level he is happy to say in public: kinds of
 // systems, not how any one of them works. The "What are you looking for?" agent
 // answers from it, and it is published as it stands at /work, /work.md and
-// /llms-full.txt. So keep it general: no organisation, product or people names,
+// /llms-full.txt. So keep it general: no organisation, product or people names (Fabindia, a past employer, is the one exception),
 // no process detail, no figures. Anything written here is public.
 export interface Capability {
   area: string;
@@ -85,6 +85,16 @@ export const work: Capability[] = [
       "Self-serve tools that let finance users define and run their own data consolidation without code",
     ],
     tech: ["Python", "pandas", "Parquet", "SQL", "PySpark", "Databricks", "Apps Script", "React"],
+  },
+  {
+    area: "Earlier career in finance and retail",
+    built: [
+      "Four years at Fabindia, a craft and lifestyle retail brand (2009 to 2013): managing the technology side of its e-commerce, which included setting up the engagement that built the mobile site, selling through online marketplaces and spreadsheet automation, and working as executive assistant to the managing director. I did not run the online business itself",
+      "About ten years in the finance function of a global IT services company: bringing an acquired company's financial data into the parent's systems, shortening purchase-to-pay and order-to-cash cycles, financial planning and analysis, and management reporting",
+      "Running the online store, payments, shipping and operating procedures for a craft social enterprise (2019 to 2021)",
+      "Tech lead and full-stack engineer for an early-stage startup",
+    ],
+    tech: ["Excel", "Power BI", "Power Query", "Python", "Shopify"],
   },
   {
     area: "Small tools",

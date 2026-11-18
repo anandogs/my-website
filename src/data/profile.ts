@@ -17,13 +17,22 @@ export const profiles = [
 
 /** One sentence: what to say if you can only say one thing. */
 export const summary =
-  "Anando Ghose builds AI agents, finance and reporting automations and the AI infrastructure they run on, leads developers, and teaches teams to use AI at work.";
+  "Anando Ghose builds AI agents, finance and reporting automations and the AI infrastructure they run on, leads developers, and teaches teams to use AI at work. His background is in corporate finance and retail e-commerce.";
 
 /** Third person, so it can be quoted as it stands. */
 export const bio = [
   "Anando Ghose builds AI agents, finance and reporting automations, and the AI infrastructure they run on. He leads developers and teaches teams to use AI at work. He is a self-taught programmer who learned through CS50, Harvard's free online course, and he has an MBA from the Indian School of Business.",
   "Most of his professional work is for finance teams: agents that follow up on unpaid invoices, review expenses or answer revenue questions in chat, reporting packs and board decks that build themselves, and the platforms, guardrails and training that let a team adopt AI safely. He does not name the organisations he has worked with.",
+  "He came to this from the business side. He started at Fabindia, a craft and lifestyle retail brand, where from 2009 to 2013 he managed the technology side of e-commerce and worked as executive assistant to the managing director. He then spent about ten years in the finance function of a global IT services company, in finance integration, financial planning and analysis, and management reporting, and taught himself to program along the way.",
   "Outside work he plants trees on a farm and builds automated watering for them, makes small apps for himself and websites for friends, and surfs.",
+];
+
+/** The same, in his own voice, for the work page and its Markdown twin. */
+export const bioFirst = [
+  "I build AI agents, finance and reporting automations, and the AI infrastructure they run on. I lead developers and teach teams to use AI at work. I am a self-taught programmer who learned through CS50, Harvard's free online course, and I have an MBA from the Indian School of Business.",
+  "Most of my professional work is for finance teams: agents that follow up on unpaid invoices, review expenses or answer revenue questions in chat, reporting packs and board decks that build themselves, and the platforms, guardrails and training that let a team adopt AI safely. I do not name the organisations I have worked with.",
+  "I came to this from the business side. I started at Fabindia, a craft and lifestyle retail brand, where from 2009 to 2013 I managed the technology side of e-commerce and worked as executive assistant to the managing director. I then spent about ten years in the finance function of a global IT services company, in finance integration, financial planning and analysis, and management reporting, and taught myself to program along the way.",
+  "Outside work I plant trees on a farm and build automated watering for them, make small apps for myself and websites for friends, and surf.",
 ];
 
 const professional = work.filter((w) => !w.personal);
@@ -39,19 +48,19 @@ export const workMarkdown = (updated: string) => `# Anando Ghose: what I have bu
 
 > ${summary}
 
-${bio.join("\n\n")}
+${bioFirst.join("\n\n")}
 
 Last updated: ${updated}. Contact: ${EMAIL}. Website: ${SITE}/
 
 ## Professional work
 
-Kinds of systems, described in general terms. Details are kept for a conversation.
+Kinds of systems, described in general terms. I keep the details for a conversation.
 
 ${section(professional)}
 
 ## Personal projects
 
-His own projects, outside work: for his garden, for himself, for friends and for small local organisations. Several are prototypes.
+My own projects, outside work: for my garden, for myself, for friends and for small local organisations. Several are prototypes.
 
 ${section(personal)}
 

@@ -3,7 +3,7 @@
 // search engines and AI crawlers (most of which do not run JavaScript) read all of
 // it. The same text is served as Markdown at /work.md and listed in /llms.txt.
 import { work } from "../data/work";
-import { SITE, EMAIL, bio, summary, profiles } from "../data/profile";
+import { SITE, EMAIL, bioFirst, summary, profiles } from "../data/profile";
 
 const updated = new Date().toISOString().slice(0, 10);
 const professional = work.filter((w) => !w.personal);
@@ -51,7 +51,7 @@ const title = "What Anando Ghose has built | AI agents, finance automation, IoT"
     <main>
       <p class="eyebrow"><a href="/">Anando Ghose</a></p>
       <h1>What I have built</h1>
-      {bio.map((p) => <p class="bio">{p}</p>)}
+      {bioFirst.map((p) => <p class="bio">{p}</p>)}
       <p class="meta">
         Updated <time datetime={updated}>{updated}</time> · <a href={`mailto:${EMAIL}`}>{EMAIL}</a> ·
         <a href="/work.md">this page as Markdown</a>
