@@ -10,6 +10,9 @@
 //   <html data-character="ready|failed"> set once the model is up, or never will be
 //   --paper, --ink, --sun-x … on <html>  the palette of the current time of day
 //   "character:scene" / "character:tap"  bubbling events, detail: { id }
+//
+// Across the top, one thin bar per scene, as wide as the scene is long: it fills as
+// the scene plays, so a visitor can see another one is coming, and a click jumps to it.
 import { scenes } from "../data/scenes";
 
 ---
@@ -22,6 +25,17 @@ import { scenes } from "../data/scenes";
     aria-label={`A low-poly 3D figure of Anando, ${scenes[0].alt}.`}
   >
     <canvas></canvas>
+  </div>
+
+  <div class="day" role="group" aria-label="His day: jump to a part of it">
+    {
+      scenes.map((s) => (
+        <button type="button" class="day-part" data-day-part={s.id} style={`flex-grow: ${s.seconds}`} aria-label={`${s.id[0].toUpperCase()}${s.id.slice(1)}: ${s.alt}`}>
+          <span class="day-track"><span class="day-fill" /></span>
+          <span class="day-name" aria-hidden="true">{s.id}</span>
+        </button>
+      ))
+    }
   </div>
 
   <p class="hint" data-hint aria-hidden="true">drag to spin · click to say hi</p>
@@ -72,6 +86,78 @@ import { scenes } from "../data/scenes";
   }
   .character-stage:not(.is-ready) .pause {
     visibility: hidden;
+  }
+
+  /* The day, as bars. Quiet until pointed at. */
+  .day {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    display: flex;
+    gap: 0.3rem;
+    width: min(13rem, 56%);
+    transform: translateX(-50%);
+  }
+  .day-part {
+    flex: 1 1 0;
+    min-width: 0;
+    /* a finger-sized target around a hairline */
+    padding: 0.55rem 0 0.3rem;
+    border: 0;
+    background: none;
+    color: var(--ink, #2b1c12);
+    cursor: pointer;
+  }
+  .day-part:disabled {
+    cursor: default;
+  }
+  .day-track {
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    transition: background-color 0.15s ease;
+  }
+  .day-fill {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: color-mix(in srgb, currentColor 50%, transparent);
+    transform: scaleX(var(--played, 0));
+    transform-origin: left;
+  }
+  .day-part:not(:disabled):hover .day-track {
+    background: color-mix(in srgb, currentColor 30%, transparent);
+  }
+  .day-part:not(:disabled):hover .day-fill,
+  .day-part.is-now .day-fill {
+    background: color-mix(in srgb, currentColor 72%, transparent);
+  }
+  .day-name {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--ink-soft, #6a5443);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .day-part.is-now .day-name {
+    opacity: 0.7;
+  }
+  .day:hover .day-name,
+  .day:focus-within .day-name {
+    opacity: 1;
+  }
+  .day-part:focus-visible {
+    outline: 3px solid var(--accent, #b23026);
+    outline-offset: 2px;
+    border-radius: 3px;
   }
 
   .hint {
@@ -128,6 +214,10 @@ import { scenes } from "../data/scenes";
     /* nothing moves by itself, so there is nothing to pause */
     .pause {
       display: none;
+    }
+    .day-track,
+    .day-name {
+      transition: none;
     }
     .character-stage > * {
       transition: none;
@@ -1100,12 +1190,58 @@ import { scenes } from "../data/scenes";
       }
     }
 
-    pauseButton?.addEventListener("click", () => {
-      state.paused = !state.paused;
-      pauseButton.setAttribute("aria-pressed", String(state.paused));
-      pauseButton.setAttribute("aria-label", state.paused ? "Play the animation" : "Pause the animation");
+    function setPaused(paused: boolean) {
+      state.paused = paused;
+      pauseButton?.setAttribute("aria-pressed", String(paused));
+      pauseButton?.setAttribute("aria-label", paused ? "Play the animation" : "Pause the animation");
       schedule();
-    });
+    }
+    pauseButton?.addEventListener("click", () => setPaused(!state.paused));
+
+    // ---- The day as bars ---------------------------------------------------------------------
+    // One per scene. Scenes already played are full, the one on stage fills as its time
+    // runs, and at night all three wait full until morning empties them.
+    const dayParts = scenes.map((s) => stage.querySelector<HTMLButtonElement>(`[data-day-part="${s.id}"]`));
+    const played = scenes.map(() => -1);
+    function showDay() {
+      const seg = segments[state.seg];
+      const through = clamp((state.dayClock - seg.start) / seg.seconds, 0, 1);
+      dayParts.forEach((part, i) => {
+        if (!part) return;
+        // with nothing moving by itself, the bar only says which scene this is
+        const p = state.index < 0 || i < state.index ? 1 : i > state.index ? 0 : reduceMotion ? 1 : through;
+        if (Math.abs(p - played[i]) > 0.002) {
+          played[i] = p;
+          part.style.setProperty("--played", p.toFixed(3));
+        }
+        const now = i === state.index;
+        if (part.classList.contains("is-now") !== now) {
+          part.classList.toggle("is-now", now);
+          if (now) part.setAttribute("aria-current", "true");
+          else part.removeAttribute("aria-current");
+        }
+        // a scene whose model has not arrived (or never will) cannot be jumped to
+        part.disabled = status[i] !== "ready";
+      });
+    }
+    function jumpTo(index: number) {
+      if (status[index] !== "ready") return;
+      const seg = segments.findIndex((s) => s.scene === index);
+      state.dayClock = segments[seg].start;
+      if (index === state.index) {
+        // already here: start this scene again
+        const pet = current()?.pet;
+        if (pet) pet.done = [];
+      } else {
+        state.seg = seg;
+        goTo(index);
+      }
+      hint?.classList.add("is-hidden");
+      if (reduceMotion) step(0, true);
+      // asking for a scene is asking to watch it
+      else setPaused(false);
+    }
+    dayParts.forEach((part, i) => part?.addEventListener("click", () => jumpTo(i)));
 
     // Drag to spin; a press that never moves counts as a tap.
     const spin = { yaw: scenes[0].homeYaw, velocity: 0, dragging: false };
@@ -1229,7 +1365,7 @@ import { scenes } from "../data/scenes";
         smileUntil = Math.max(smileUntil, time + (surfing ? rand(3, 6) : 2));
         nextSmile = smileUntil + (surfing ? rand(1.5, 3) : rand(10, 20));
       }
-      if (state.waving || time < smileUntil) return showMouth(actor, "Smile");
+      if (state.waving || time < smileUntil || activity()?.smiles) return showMouth(actor, "Smile");
       if (talking() && talk.who === -1) {
         if (time > talk.flipAt) {
           // syllables: 4–8 mouth changes a second
@@ -1522,6 +1658,7 @@ import { scenes } from "../data/scenes";
         frameNow.pitch += (cfg.frame.pitch - frameNow.pitch) * k(2.5);
       }
       placeCamera();
+      showDay();
 
       paint(time);
     }

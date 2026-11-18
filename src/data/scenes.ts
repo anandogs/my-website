@@ -22,8 +22,8 @@ export interface SceneConfig {
    *  overlap), each only if the model has its clip. `tiles`: nodes named
    *  `${tiles}0..N` float up while it lasts (and it only runs if they exist).
    *  `talks`: his mouth moves as in conversation. `buddy`: the desk robot turns
-   *  to him and listens. */
-  also?: { clip: string; from: number; to: number; tiles?: string; talks?: boolean; buddy?: boolean }[];
+   *  to him and listens. `smiles`: he smiles for as long as it lasts. */
+  also?: { clip: string; from: number; to: number; tiles?: string; talks?: boolean; buddy?: boolean; smiles?: boolean }[];
   /** A pet with two node clips on this scene's model: it loops `rest`, and at each
    *  clock time in `spells` plays `spell` for that many whole loops. `head` is the
    *  node that turns to the visitor on a tap. */
@@ -49,13 +49,16 @@ export const scenes: SceneConfig[] = [
     model: "/models/anando_work.glb",
     clip: "Laptop",
     props: "Prop_Laptop",
-    // 6 real seconds per clock hour here: he types, has a word with his agent,
-    // takes a mid-morning video call, checks in with the agent again before lunch.
-    // The agent chats are 5 s long (0.83 h) to fit the `Laptop_Agent` clip exactly.
+    // 6 real seconds per clock hour here: he types, has a word with his agent, drinks
+    // his coffee, takes a late-morning video call, and strokes Imly before lunch.
+    // Each slot is as long as its clip, so the clip plays once and ends where typing
+    // starts: the agent chat 5 s (0.83 h), the coffee 4.2 s (0.70 h), stroking Imly
+    // 4.4 s (0.73 h). The call clip is longer than its slot and is simply cut short.
     also: [
-      { clip: "Laptop_Agent", from: 9.5, to: 10.33, talks: true, buddy: true },
-      { clip: "Laptop_Call", from: 10.5, to: 12.0, tiles: "Prop_Laptop_CallTile", talks: true },
-      { clip: "Laptop_Agent", from: 12.1, to: 12.93, talks: true, buddy: true },
+      { clip: "Laptop_Agent", from: 9.3, to: 10.13, talks: true, buddy: true },
+      { clip: "Laptop_Coffee", from: 10.25, to: 10.95 },
+      { clip: "Laptop_Call", from: 11.05, to: 12.15, tiles: "Prop_Laptop_CallTile", talks: true },
+      { clip: "Laptop_Pet", from: 12.22, to: 12.953, smiles: true },
     ],
     // Imly sleeps on the desk the whole morning (the grooming pose is unused for now)
     pet: {
