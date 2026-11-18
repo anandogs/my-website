@@ -46,7 +46,7 @@ ${JSON.stringify(work)}`;
 // Throttling. Serverless instances come and go, so these counters only blunt a burst
 // from one address; the hard ceilings are the firewall rate-limit rule on this path
 // and the spend limit on the API key.
-const PER_MINUTE = 4;
+const PER_MINUTE = 10; // same as the firewall rule
 const PER_DAY = 25;
 const PER_DAY_EVERYONE = 300;
 const minute = new Map<string, number[]>();

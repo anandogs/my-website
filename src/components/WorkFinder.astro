@@ -384,9 +384,10 @@
       else panel.scrollTop = 0;
     }
 
-    // The agent's reply, or null if it can't be had for any reason: no key, rate
-    // limit, outage, timeout.
-    async function ask(q: string): Promise<{ note: string; areas: string[] } | null> {
+    // The agent's reply; "limited" when this visitor has asked too much too fast (the
+    // firewall or the endpoint said 429); or null if it can't be had for any other
+    // reason: no key, outage, timeout.
+    async function ask(q: string): Promise<{ note: string; areas: string[] } | "limited" | null> {
       const abort = (pending = new AbortController());
       const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
       try {
@@ -396,6 +397,7 @@
           body: JSON.stringify({ q }),
           signal: abort.signal,
         });
+        if (response.status === 429) return "limited"; // the firewall's 429 isn't JSON
         const answer = await response.json();
         if (!response.ok || answer.fallback || typeof answer.note !== "string" || !answer.note.trim()) return null;
         const areas = Array.isArray(answer.areas) ? answer.areas.filter((a: unknown) => typeof a === "string") : [];
@@ -424,9 +426,9 @@
       busy = false;
       status.classList.remove("is-thinking");
 
-      if (!answer) {
-        const line = el("p", "My agent is not answering right now. ");
-        const mail = el("a", "Email me and I will reply myself.") as HTMLAnchorElement;
+      if (!answer || answer === "limited") {
+        const line = el("p", answer ? "Wow, you're quite interested in my work! " : "My agent is not answering right now. ");
+        const mail = el("a", answer ? "Why don't you drop me a mail and we can connect." : "Email me and I will reply myself.") as HTMLAnchorElement;
         mail.href = "mailto:me@anandoghose.com?subject=Your%20work";
         line.append(mail);
         return show([line], false);
