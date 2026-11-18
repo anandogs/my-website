@@ -116,11 +116,11 @@ export const work: Capability[] = [
     area: "IoT and home automation",
     personal: true,
     built: [
-      "A microcontroller watering valve for my trees that opens on a message over the network and shuts itself off after a set time (prototype)",
+      "An automated watering system for my trees: an ESP32 and a solenoid valve that opens on a message over the network and shuts itself off after a set time",
       "Experiments in soil-moisture sensing on a microcontroller: reading and calibrating the sensors and bench-testing a servo",
       "A phone lockbox guarded by an AI assistant that asks for a reason before unlocking and logs every unlock (prototype)",
     ],
-    tech: ["ESP8266", "NodeMCU", "Arduino", "MicroPython", "MQTT", "MCP", "Python", "SQLite"],
+    tech: ["ESP32", "Arduino", "MicroPython", "MQTT", "MCP", "Python", "SQLite"],
   },
   {
     area: "Farm and community projects",
