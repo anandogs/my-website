@@ -7,5 +7,6 @@ export default defineConfig({
   site: 'https://www.anandoghose.com',
   integrations: [sitemap({ filter: (page) => !page.includes('/random1') })],
   // Pages stay static; only src/pages/api/* opt out of prerendering and run on Vercel.
-  adapter: vercel(),
+  // Web Analytics: cookieless visit counts, read in the Vercel dashboard.
+  adapter: vercel({ webAnalytics: { enabled: true } }),
 });
