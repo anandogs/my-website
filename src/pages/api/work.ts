@@ -6,6 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod/v4";
 import { work } from "../../data/work";
+import { record } from "../../lib/questions";
 
 export const prerender = false;
 
@@ -55,7 +56,7 @@ const PER_DAY_EVERYONE = 300;
 const minute = new Map<string, number[]>();
 const daily = new Map<string, number>();
 // Repeat questions are answered from memory instead of being paid for again.
-const answered = new Map<string, unknown>();
+const answered = new Map<string, { note: string; areas: string[] }>();
 let day = "";
 let today = 0;
 
@@ -108,8 +109,15 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   // `fallback` tells the page to use its own keyword search instead.
   if (!apiKey) return json({ fallback: true }, 503);
   const key = q.toLowerCase().replace(/\s+/g, " ");
-  if (answered.has(key)) return json(answered.get(key));
-  if (limited(clientAddress)) return json({ fallback: true }, 429);
+  if (answered.has(key)) {
+    const cached = answered.get(key)!;
+    await record(request, { q, outcome: "cached", ...cached });
+    return json(cached);
+  }
+  if (limited(clientAddress)) {
+    await record(request, { q, outcome: "limited" });
+    return json({ fallback: true }, 429);
+  }
 
   const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 20_000 });
   try {
@@ -122,15 +130,20 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
       messages: [{ role: "user", content: q }],
     });
     const answer = response.parsed_output;
-    if (response.stop_reason === "refusal" || !answer) return json({ fallback: true }, 502);
+    if (response.stop_reason === "refusal" || !answer) {
+      await record(request, { q, outcome: "refused" });
+      return json({ fallback: true }, 502);
+    }
     const result = {
       note: answer.note.slice(0, 800),
       areas: answer.areas.filter((name) => AREAS.includes(name)).slice(0, 2),
     };
     if (answered.size > 500) answered.clear();
     answered.set(key, result);
+    await record(request, { q, outcome: "answered", ...result });
     return json(result);
   } catch (error) {
+    await record(request, { q, outcome: "error" });
     if (error instanceof Anthropic.RateLimitError) return json({ fallback: true }, 429);
     if (error instanceof Anthropic.AuthenticationError) return json({ fallback: true }, 503);
     if (error instanceof Anthropic.APIError) return json({ fallback: true }, 502);
