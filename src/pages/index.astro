@@ -26,7 +26,8 @@ const graph = {
       "@id": `${SITE}/#profilepage`,
       url: `${SITE}/`,
       isPartOf: { "@id": `${SITE}/#website` },
-      dateModified: new Date().toISOString().slice(0, 10),
+      // a full date-time with its zone: Google rejects a bare date here
+      dateModified: new Date().toISOString(),
       mainEntity: { "@id": `${SITE}/#person` },
     },
     {
